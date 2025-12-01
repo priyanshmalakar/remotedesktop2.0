@@ -1,0 +1,396 @@
+ion-content {
+  --background: #000;
+  position: relative;
+  overflow: hidden;
+}
+
+// ========== BACKGROUND BLUR VIDEO ==========
+.video-background,
+#videobg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: blur(20px);
+  opacity: 0.3;
+  z-index: 0;
+  pointer-events: none;
+}
+
+// ========== MAIN SCREEN VIDEO (VISIBLE - HOST's screen with audio) ==========
+.main-screen-video,
+#remoteVideo {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  object-fit: contain !important;
+  z-index: 1 !important;
+  background: #000;
+  pointer-events: none;
+}
+
+// ========== CONTROL VIDEO (INVISIBLE - for mouse/keyboard only, NO audio) ==========
+.control-video,
+#video {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  object-fit: contain !important;
+  z-index: 2 !important;
+  background: transparent;
+  opacity: 0.01;
+  pointer-events: auto;
+  
+  &::-webkit-media-controls-panel {
+    display: none !important;
+  }
+  &::-webkit-media-controls {
+    display: none !important;
+  }
+}
+// ========== PiP CONTAINER STYLES ==========
+.pip-container {
+  position: fixed !important;
+  z-index: 100 !important;
+  border-radius: 12px !important;
+  background: #1a1a1a;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.8) !important;
+  transition: all 0.3s ease;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  pointer-events: auto !important;
+  
+  &.host-pip {
+    width: 240px !important;
+    height: 220px !important;
+    border: 3px solid #4a90e2 !important;
+    
+    &.minimized {
+      height: 40px !important;
+      width: 200px !important;
+    }
+    
+    &.fullscreen {
+      width: 100vw !important;
+      height: 100vh !important;
+      left: 0 !important;
+      top: 0 !important;
+      border-radius: 0 !important;
+      z-index: 150 !important;
+      cursor: default !important;
+    }
+  }
+  
+  &.local-pip {
+    width: 200px !important;
+    height: 190px !important;
+    border: 3px solid #2ecc71 !important;
+    
+    &.minimized {
+      height: 40px !important;
+      width: 180px !important;
+    }
+    
+    &.fullscreen {
+      width: 100vw !important;
+      height: 100vh !important;
+      left: 0 !important;
+      top: 0 !important;
+      border-radius: 0 !important;
+      z-index: 150 !important;
+      cursor: default !important;
+    }
+  }
+}
+
+.pip-header {
+  height: 40px;
+  min-height: 40px;
+  background: rgba(0, 0, 0, 0.95);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 12px;
+  cursor: move;
+  user-select: none;
+  flex-shrink: 0;
+  pointer-events: auto !important;
+  z-index: 1;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  
+  .fullscreen & {
+    cursor: default;
+    background: rgba(0, 0, 0, 0.98);
+  }
+  
+  .pip-label {
+    color: white;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    
+    ion-icon {
+      font-size: 16px;
+      opacity: 0.8;
+    }
+  }
+  
+  .pip-controls {
+    display: flex;
+    gap: 2px;
+    pointer-events: auto !important;
+    
+    ion-button {
+      --padding-start: 6px;
+      --padding-end: 6px;
+      height: 30px;
+      width: 30px;
+      margin: 0;
+      pointer-events: auto !important;
+      --background: transparent;
+      --background-hover: rgba(255, 255, 255, 0.1);
+      --background-activated: rgba(255, 255, 255, 0.2);
+      --border-radius: 6px;
+      
+      ion-icon {
+        font-size: 18px;
+        color: white;
+      }
+      
+      &:hover {
+        --background: rgba(255, 255, 255, 0.15);
+      }
+      
+      &:last-child:hover {
+        --background: rgba(244, 67, 54, 0.8);
+      }
+    }
+  }
+}
+
+// ========== PiP VIDEO (UNIFIED STYLE) ==========
+.pip-video {
+  width: 100% !important;
+  height: 100% !important;
+  flex: 1;
+  object-fit: cover !important;
+  display: block !important;
+  background: #000;
+  pointer-events: none !important;
+  
+  .fullscreen & {
+    object-fit: contain !important;
+  }
+}
+
+// ========== VIDEO CONTROLS (BOTTOM CENTER) ==========
+app-quick-controls,
+.video-controls {
+  position: fixed !important;
+  bottom: 20px !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  z-index: 101 !important;
+  pointer-events: auto;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+// ========== UTILITY CLASSES ==========
+.hidden {
+  display: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+}
+
+input.hidden {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+// ========== FILE DROP OVERLAY ==========
+.file-drop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(46, 204, 113, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  pointer-events: auto;
+  
+  ion-icon {
+    font-size: 80px;
+    color: white;
+  }
+}
+
+// ========== CONNECTING SPINNER ==========
+.connecting {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 150;
+  pointer-events: none;
+  
+  ion-spinner {
+    width: 60px;
+    height: 60px;
+    --color: #4a90e2;
+  }
+}
+
+// ========== OPTIONS DROPDOWN BUTTON (TOP RIGHT) ==========
+.option-dropdown {
+  position: fixed !important;
+  top: 10px !important;
+  right: 10px !important;
+  z-index: 110 !important;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(10px);
+  pointer-events: auto;
+  
+  &:hover {
+    background: rgba(0, 0, 0, 0.85);
+  }
+}
+
+// ========== HEADER (WHEN OPTIONS SHOWN) ==========
+ion-header {
+  z-index: 105;
+  position: fixed;
+  top: 40px;
+  left: 0;
+  right: 0;
+  pointer-events: auto;
+}
+
+ion-toolbar {
+  --background: rgba(var(--ion-color-primary-rgb), 0.95);
+  backdrop-filter: blur(10px);
+}
+
+// ========== FILE TRANSFER PROGRESS BAR ==========
+.progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.2);
+  z-index: 150;
+  pointer-events: none;
+  
+  .inner-progress {
+    height: 100%;
+    background: linear-gradient(90deg, #2ecc71, #27ae60);
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding-right: 10px;
+    color: white;
+    font-size: 12px;
+    font-weight: bold;
+    transition: width 0.3s ease;
+  }
+}
+
+// ========== FILE LOADING INDICATOR ==========
+.fileLoading {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(0, 0, 0, 0.9);
+  padding: 25px 40px;
+  border-radius: 12px;
+  z-index: 150;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  color: white;
+  font-size: 16px;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  pointer-events: none;
+  
+  ion-spinner {
+    --color: #2ecc71;
+  }
+}
+
+// ========== REMOVE DEFAULT VIDEO STYLING ==========Escape
+video {
+  display: block;
+  margin: 0;
+  padding: 0;
+}
+
+.video-container {
+  display: none !important;
+}
+
+// ========== RESPONSIVE ADJUSTMENTS ==========
+@media (max-width: 768px) {
+  .pip-container {
+    &.host-pip {
+      width: 160px !important;
+      height: 160px !important;
+      
+      &.minimized {
+        height: 36px !important;
+      }
+    }
+    
+    &.local-pip {
+      width: 140px !important;
+      height: 145px !important;
+      
+      &.minimized {
+        height: 36px !important;
+      }
+    }
+  }
+  
+  .pip-header {
+    height: 36px;
+    min-height: 36px;
+    padding: 0 8px;
+    
+    .pip-label {
+      font-size: 11px;
+    }
+    
+    .pip-controls ion-button {
+      height: 24px;
+      width: 24px;
+      
+      ion-icon {
+        font-size: 16px;
+      }
+    }
+  }
+  
+  app-quick-controls,
+  .video-controls {
+    bottom: 10px !important;
+    gap: 8px;
+  }
+}

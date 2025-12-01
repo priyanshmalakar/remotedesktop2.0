@@ -1,0 +1,4 @@
+1. authorize access -> can direct connect!
+2. video and audio in same time 
+3. profile creation and name display
+4. UI frontend 

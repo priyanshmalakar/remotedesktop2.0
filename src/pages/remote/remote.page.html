@@ -1,0 +1,291 @@
+<div
+    *ngIf="fileDrop"
+    class="file-drop">
+    <ion-icon name="document-outline"></ion-icon>
+</div>
+
+<input
+    class="hidden"
+    #fileInput
+    type="file"
+    (change)="fileChangeEvent($event.target)" />
+
+<div
+    class="connecting"
+    *ngIf="!connected">
+    <ion-spinner></ion-spinner>
+</div>
+
+<ion-button
+    class="option-dropdown"
+    (click)="showOptions = !showOptions"
+    [tp]="'Options'|translate">
+    <ion-icon
+        *ngIf="!showOptions"
+        name="chevron-down-outline"></ion-icon>
+    <ion-icon
+        *ngIf="showOptions"
+        name="chevron-up-outline"></ion-icon>
+</ion-button>
+
+<ion-header
+    *ngIf="showOptions"
+    [@fadeInDownOnEnter]
+    [@fadeOutUpOnLeave]>
+    <ion-toolbar
+        color="primary"
+        *ngIf="electronService.isElectron">
+        <ion-title
+            class="flex items-center justify-center"
+            *ngIf="!connected">
+            {{'Waiting for confirmation ...'|translate}}
+        </ion-title>
+
+        <ion-buttons slot="end">
+            <ion-button
+                (click)="cursor = !cursor"
+                [tp]="'Show mouse pointer'|translate">
+                <svg
+                    style="width: 28px; height: 28px"
+                    version="1.1"
+                    id="Layer_1"
+                    xmlns="http://www.w3.org/2000/svg"
+                    xmlns:xlink="http://www.w3.org/1999/xlink"
+                    x="0px"
+                    y="0px"
+                    viewBox="0 0 28 28"
+                    enable-background="new 0 0 28 28"
+                    xml:space="preserve">
+                    <polygon
+                        fill="#FFFFFF"
+                        points="8.2,20.9 8.2,4.9 19.8,16.5 13,16.5 12.6,16.6 " />
+                    <polygon
+                        fill="#FFFFFF"
+                        points="17.3,21.6 13.7,23.1 9,12 12.7,10.5 " />
+                    <rect
+                        x="12.5"
+                        y="13.6"
+                        transform="matrix(0.9221 -0.3871 0.3871 0.9221 -5.7605 6.5909)"
+                        width="2"
+                        height="8" />
+                    <polygon
+                        points="9.2,7.3 9.2,18.5 12.2,15.6 12.6,15.5 17.4,15.5 " />
+                </svg>
+                <ion-checkbox [(ngModel)]="cursor"></ion-checkbox>
+            </ion-button>
+
+            <ion-button
+                (click)="fileInput.click()"
+                [tp]="'Send file'|translate">
+                <ion-icon name="document-outline"></ion-icon>
+            </ion-button>
+            <ion-button
+                (click)="close()"
+                [tp]="'Close connection'|translate">
+                <ion-icon name="close"></ion-icon>
+            </ion-button>
+        </ion-buttons>
+    </ion-toolbar>
+</ion-header>
+
+<ion-content
+    no-bounce
+    has-bouncing="false"
+    forceOverscroll="false">
+    
+    <div
+        class="progress"
+        *ngIf="fileProgress != 0 && fileProgress != 100">
+        <div
+            class="inner-progress transition-all"
+            [style.width.%]="fileProgress">
+            {{getFileProgress(fileProgress)}}%
+        </div>
+    </div>
+    
+    <div
+        *ngIf="fileLoading"
+        class="fileLoading"
+        [tp]="'File is sent ...'|translate">
+        <ion-spinner [color]="'light'"></ion-spinner>
+    </div>
+
+   <video
+    id="videobg"
+    class="video-background"
+    autoplay
+    muted
+    playsinline></video>
+
+<!-- Layer 1: Main DISPLAY video - HOST's screen (VISIBLE with audio) -->
+<video
+    #remoteVideo
+    id="remoteVideo"
+    class="main-screen-video"
+    autoplay
+    playsinline></video>
+
+<!-- Layer 2: CONTROL video - Invisible overlay for mouse/keyboard events -->
+<video
+    id="video"
+    class="control-video"
+    autoplay
+    muted
+    playsinline
+    [style.cursor]="cursor ? 'default' : 'none'"></video>
+
+<!-- Layer 100: HOST's camera PiP (top-left corner, blue border) -->
+<div 
+    class="pip-container host-pip"
+    [class.hidden]="!connected"
+    [class.minimized]="hostCameraMinimized"
+    [class.fullscreen]="hostCameraFullscreen"
+    [style.left.px]="hostCameraFullscreen ? 0 : hostCameraPosition.x"
+    [style.top.px]="hostCameraFullscreen ? 0 : hostCameraPosition.y">
+    
+    <div class="pip-header" (mousedown)="startDragHost($event)">
+        <span class="pip-label">
+            <ion-icon name="videocam"></ion-icon>
+            Host Camera
+        </span>
+        <div class="pip-controls" (mousedown)="$event.stopPropagation()">
+            <!-- Minimize/Restore button -->
+            <ion-button 
+                fill="clear" 
+                size="small"
+                [tp]="hostCameraMinimized ? 'Restore' : 'Minimize'"
+                (click)="toggleHostCamera(); $event.stopPropagation()">
+                <ion-icon 
+                    [name]="hostCameraMinimized ? 'remove' : 'remove'"
+                    slot="icon-only"></ion-icon>
+            </ion-button>
+            
+            <!-- Fullscreen toggle button -->
+            <ion-button 
+                fill="clear" 
+                size="small"
+                [tp]="hostCameraFullscreen ? 'Exit Fullscreen' : 'Fullscreen'"
+                (click)="toggleHostFullscreen(); $event.stopPropagation()">
+                <ion-icon 
+                    [name]="hostCameraFullscreen ? 'contract' : 'expand'"
+                    slot="icon-only"></ion-icon>
+            </ion-button>
+            
+            <!-- Close button -->
+            <ion-button 
+                fill="clear" 
+                size="small"
+                tp="Close"
+                (click)="closeHostCamera(); $event.stopPropagation()">
+                <ion-icon 
+                    name="close"
+                    slot="icon-only"></ion-icon>
+            </ion-button>
+        </div>
+    </div>
+    
+    <video
+        [style.display]="hostCameraMinimized ? 'none' : 'block'"
+        #hostCameraVideo
+        id="hostCameraVideo"
+        class="pip-video"
+        autoplay
+        playsinline
+        muted></video>
+</div>
+
+
+<!-- Layer 100: YOUR camera PiP (bottom-left corner, green border) -->
+<div 
+    class="pip-container local-pip"
+    [class.hidden]="!connected || !localStream"
+    [class.minimized]="localCameraMinimized"
+    [class.fullscreen]="localCameraFullscreen"
+    [style.left.px]="localCameraFullscreen ? 0 : localCameraPosition.x"
+    [style.top.px]="localCameraFullscreen ? 0 : localCameraPosition.y">
+    
+    <div class="pip-header" (mousedown)="startDragLocal($event)">
+        <span class="pip-label">
+            <ion-icon name="person-circle"></ion-icon>
+            Your Camera
+        </span>
+        <div class="pip-controls" (mousedown)="$event.stopPropagation()">
+            <!-- Minimize/Restore button -->
+            <ion-button 
+                fill="clear" 
+                size="small"
+                [tp]="localCameraMinimized ? 'Restore' : 'Minimize'"
+                (click)="toggleLocalCamera(); $event.stopPropagation()">
+                <ion-icon 
+                    [name]="localCameraMinimized ? 'remove' : 'remove'"
+                    slot="icon-only"></ion-icon>
+            </ion-button>
+            
+            <!-- Fullscreen toggle button -->
+            <ion-button 
+                fill="clear" 
+                size="small"
+                [tp]="localCameraFullscreen ? 'Exit Fullscreen' : 'Fullscreen'"
+                (click)="toggleLocalFullscreen(); $event.stopPropagation()">
+                <ion-icon 
+                    [name]="localCameraFullscreen ? 'contract' : 'expand'"
+                    slot="icon-only"></ion-icon>
+            </ion-button>
+            
+            <!-- Close button -->
+            <ion-button 
+                fill="clear" 
+                size="small"
+                tp="Close"
+                (click)="closeLocalCamera(); $event.stopPropagation()">
+                <ion-icon 
+                    name="close"
+                    slot="icon-only"></ion-icon>
+            </ion-button>
+        </div>
+    </div>
+    
+    <video
+       [style.display]="localCameraMinimized ? 'none' : 'block'"
+        #localVideo
+        id="localVideo"
+        class="pip-video"
+        autoplay
+        playsinline
+        muted></video>
+</div>
+    <!-- Quick controls (bottom center) -->
+   <div 
+    *ngIf="connected" 
+    class="video-controls">
+    <ion-button 
+        (click)="toggleAudio()"
+        [color]="isMuted ? 'danger' : 'primary'"
+        size="large"
+        shape="round">
+        <ion-icon 
+            [name]="isMuted ? 'mic-off' : 'mic'"
+            slot="icon-only"></ion-icon>
+    </ion-button>
+    
+    <ion-button 
+        (click)="toggleVideo()"
+        [color]="!videoOn ? 'danger' : 'primary'"
+        size="large"
+        shape="round">
+        <ion-icon 
+            [name]="videoOn ? 'videocam' : 'videocam-off'"
+            slot="icon-only"></ion-icon>
+    </ion-button>
+    
+    <ion-button 
+        (click)="endCall()"
+        color="danger"
+        size="large"
+        shape="round">
+        <ion-icon 
+            name="call"
+            slot="icon-only"></ion-icon>
+    </ion-button>
+</div>
+</ion-content>

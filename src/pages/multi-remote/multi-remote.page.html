@@ -1,0 +1,104 @@
+<!-- multi-remote.page.html -->
+<div class="container" [class.fullscreen]="viewMode === 'fullscreen'">
+    
+    <!-- Grid View -->
+    <div class="grid-view" *ngIf="viewMode === 'grid'">
+        <div class="add-monitor-bar">
+            <input
+                type="text"
+                [(ngModel)]="newMonitorId"
+                maxlength="9"
+                placeholder="Enter Monitor ID (9 digits)"
+                (keydown.enter)="addMonitor()"
+                class="monitor-input"
+            />
+            <button (click)="addMonitor()" class="add-btn">+ Add Monitor</button>
+        </div>
+
+        <div class="monitors-grid">
+            <div *ngFor="let monitor of getMonitorArray()" 
+                 class="monitor-card"
+                 [class.connected]="monitor.status === 'connected'"
+                 [class.connecting]="monitor.status === 'connecting'"
+                 [class.error]="monitor.status === 'error'"
+                 (click)="monitor.status === 'connected' ? selectMonitor(monitor.id) : null">
+                
+                <video [id]="'video-' + monitor.id" 
+                       autoplay
+                       playsinline
+                       muted></video>
+                
+                <div class="monitor-info">
+                    <span class="monitor-id">{{monitor.id}}</span>
+                    <span class="status-badge" 
+                          [class.status-connected]="monitor.status === 'connected'"
+                          [class.status-connecting]="monitor.status === 'connecting'"
+                          [class.status-error]="monitor.status === 'error'">
+                        {{monitor.status}}
+                    </span>
+                    
+                    <!-- Cancel button for connecting -->
+                    <button 
+                        *ngIf="monitor.status === 'connecting'" 
+                        class="cancel-btn"
+                        (click)="cancelConnection(monitor.id, $event)"
+                        title="Cancel Connection">
+                        Cancel
+                    </button>
+                    
+                    <!-- Disconnect button for connected -->
+                    <button 
+                        *ngIf="monitor.status === 'connected'" 
+                        class="disconnect-btn"
+                        (click)="disconnectMonitor(monitor.id, $event)"
+                        title="Disconnect">
+                        ✕
+                    </button>
+
+                    <!-- Remove button for error -->
+                    <button 
+                        *ngIf="monitor.status === 'error'" 
+                        class="remove-btn"
+                        (click)="disconnectMonitor(monitor.id, $event)"
+                        title="Remove">
+                        Remove
+                    </button>
+                </div>
+            </div>
+
+            <div class="empty-state" *ngIf="getMonitorArray().length === 0">
+                <p>No monitors connected</p>
+                <p class="hint">Enter a Monitor ID above to connect</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Fullscreen View -->
+    <div class="fullscreen-view" 
+         *ngIf="viewMode === 'fullscreen' && selectedMonitorId"
+         (keydown)="sendKeyboardEvent($event)"
+         (wheel)="sendScrollEvent($event)"
+         tabindex="0">
+        
+        <div class="fullscreen-header">
+            <button class="back-button" (click)="backToGrid()">
+                ← Back to Grid
+            </button>
+            <span class="fullscreen-id">Monitor: {{selectedMonitorId}}</span>
+            <button class="disconnect-btn-fullscreen" 
+                    (click)="disconnectMonitor(selectedMonitorId)">
+                Disconnect
+            </button>
+        </div>
+        
+        <div class="fullscreen-video-container">
+            <video [id]="'video-fullscreen-' + selectedMonitorId"
+                   autoplay
+                   playsinline
+                   (mousemove)="sendMouseEvent($event)"
+                   (mousedown)="sendMouseEvent($event)"
+                   (mouseup)="sendMouseEvent($event)"
+                   (dblclick)="sendMouseEvent($event)"></video>
+        </div>
+    </div>
+</div>

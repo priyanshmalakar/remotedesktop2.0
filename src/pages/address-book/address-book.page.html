@@ -1,0 +1,49 @@
+<ion-header>
+  <div class="bg-gradient-to-r from-blue-200 to-blue-400 shadow-lg">
+    <ion-toolbar>
+      <ion-buttons slot="start">
+        <ion-menu-button class="text-blue-900"></ion-menu-button>
+      </ion-buttons>
+       <ion-title class="!text-blue-900 !font-bold !text-xl">{{ 'Address book' | translate }}</ion-title>
+    </ion-toolbar>
+  </div>
+</ion-header>
+<ion-content class="ion-padding">
+  <div
+    class="box flex flex-col shadow-md rounded-xl mt-3 mb-5 bg-[#FFFFFF] border border-[#E8DFCA]"
+    *ngFor="let addressBook of addressBookService.addressBook; let i = index"
+  >
+    <div class="z-10 flex flex-col py-5 px-6 space-y-4 rounded-xl">
+      <div class="flex items-center justify-between">
+        <!-- ID badge -->
+      <div class="flex flex-col">
+  <span
+    class="h-10 min-w-[120px] rounded-md px-4 flex items-center justify-center font-semibold text-lg text-[#333] bg-[#CBDCEB]"
+  >
+    {{ addressBook.id }}
+  </span>
+
+  <!-- Editable name -->
+  <input
+    type="text"
+    [(ngModel)]="addressBook.name"
+    (blur)="updateLabel(addressBook.id, addressBook.name)"
+    placeholder="Enter label"
+    class="mt-2 border rounded-md bg-white  px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+  />
+</div>
+
+
+        <!-- Connect button -->
+        <ion-button
+          class="ml-3 pastel-btn"
+          (click)="connect(addressBook.id)"
+           class="bg-blue-400 text-white font-semibold px-6 py-3 rounded-xl shadow-md transform hover:scale-105 transition-all duration-200 border-0">
+                        <ion-icon name="link" class="mr-2"></ion-icon>
+        
+          {{ 'Connect' | translate }}
+        </ion-button>
+      </div>
+    </div>
+  </div>
+</ion-content>

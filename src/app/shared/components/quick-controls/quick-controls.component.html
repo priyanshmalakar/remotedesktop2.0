@@ -1,0 +1,31 @@
+<div class="controls-container">
+    <ion-button 
+        (click)="onToggleMic()"
+        [color]="isMuted ? 'danger' : 'primary'"
+        size="large"
+        shape="round">
+        <ion-icon 
+            [name]="isMuted ? 'mic-off' : 'mic'"
+            slot="icon-only"></ion-icon>
+    </ion-button>
+    
+    <ion-button 
+        (click)="onToggleCamera()"
+        [color]="!videoOn ? 'danger' : 'primary'"
+        size="large"
+        shape="round">
+        <ion-icon 
+            [name]="videoOn ? 'videocam' : 'videocam-off'"
+            slot="icon-only"></ion-icon>
+    </ion-button>
+    
+    <ion-button 
+        (click)="onEndCall()"
+        color="danger"
+        size="large"
+        shape="round">
+        <ion-icon 
+            name="call"
+            slot="icon-only"></ion-icon>
+    </ion-button>
+</div>

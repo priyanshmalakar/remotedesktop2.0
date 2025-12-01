@@ -1,0 +1,93 @@
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes shimmer {
+    0% {
+        background-position: -200px 0;
+    }
+    100% {
+        background-position: calc(200px + 100%) 0;
+    }
+}
+
+.animation-delay-200 {
+    animation-delay: 200ms;
+}
+
+.animation-delay-400 {
+    animation-delay: 400ms;
+}
+
+/* Custom input styling */
+input:focus {
+    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.25), 0 10px 25px -5px rgba(59, 130, 246, 0.4);
+}
+
+/* Button shimmer effect */
+
+
+/* Enhanced hover effects */
+.hover-lift:hover {
+    transform: translateY(-8px) scale(1.02);
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+}
+
+/* Gradient borders */
+.gradient-border {
+    position: relative;
+    background: linear-gradient(45deg, #6D94C5, #CBDCEB);
+    padding: 2px;
+    border-radius: 16px;
+}
+
+.gradient-border::before {
+    content: '';
+    position: absolute;
+    inset: 2px;
+    background: white;
+    border-radius: 14px;
+    z-index: -1;
+}
+
+/* Glowing effects */
+.glow-blue {
+    box-shadow: 0 0 20px rgba(109, 148, 197, 0.5);
+}
+
+.glow-green {
+    box-shadow: 0 0 20px rgba(34, 197, 94, 0.5);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .w-14.h-14 {
+        @apply w-12 h-12 text-xl;
+    }
+    
+    .px-10 {
+        @apply px-6;
+    }
+    
+    .py-10 {
+        @apply py-6;
+    }
+    
+    .text-3xl {
+        @apply text-2xl;
+    }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+    ion-content {
+        --background: linear-gradient(135deg, #1e2329 0%, #2c3440 50%, #1e2329 100%);
+    }
+}

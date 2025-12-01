@@ -1,0 +1,89 @@
+<ion-header>
+  <div class="bg-gradient-to-r from-blue-200 to-blue-400 shadow-lg">
+    <ion-toolbar>
+      <ion-buttons slot="start">
+        <ion-menu-button class="text-blue-900"></ion-menu-button>
+      </ion-buttons>
+      <ion-title class="!text-blue-900 !font-bold !text-xl">{{'Settings'| translate}}</ion-title>
+      <ion-buttons slot="end" class="mr-3">
+        <ion-spinner
+          *ngIf="connectService.fileLoading"
+          color="primary"
+          class="w-5 h-5">
+        </ion-spinner>
+        <ion-button
+          [title]="'Select screen' | translate"
+          (click)="screenSelect(false, true)"
+          fill="clear"
+          class="!text-blue-900 hover:bg-blue-100 transition-colors">
+          <ion-icon name="browsers-outline" class="text-lg"></ion-icon>
+        </ion-button>
+      </ion-buttons>
+    </ion-toolbar>
+  </div>
+</ion-header>
+<ion-content class="ion-padding">
+    <div
+        class="box flex flex-col shadow-xl rounded-xl mt-3 overflow-hidden mb-5 bg-white p-3">
+        <ion-input
+        [label]="'display name' |translate"
+        [(ngModel)]="compName"
+        label-placement="floating"
+        fill="solid"
+        placeholder="Enter text"></ion-input>
+
+         <ion-item lines="none">
+        <ion-checkbox
+            [(ngModel)]="settingsService.settings.randomId"
+            (ngModelChange)="randomIdChange()"
+            slot="start"></ion-checkbox>
+        <ion-label>{{'Random ID'}}</ion-label>
+    </ion-item> 
+
+          <ion-item lines="none">
+        <ion-checkbox
+            [(ngModel)]="autoStartEnabled"
+            (ngModelChange)="changeAutoStart()"
+            slot="start"></ion-checkbox>
+        <ion-label>{{'Autostart'}}</ion-label>
+    </ion-item> 
+
+       
+     </div>
+
+    <div
+        class="box flex flex-col shadow-xl rounded-xl mt-3 overflow-hidden mb-5 bg-white p-3">
+        <ion-item lines="none">
+            <ion-checkbox
+                [(ngModel)]="settingsService.settings.hiddenAccess"
+                (ngModelChange)="changeHiddenAccess()"
+                slot="start"></ion-checkbox>
+            <ion-label>{{'Unattended access' }}</ion-label>
+        </ion-item>
+
+        <div
+            class="mt-2"
+            *ngIf="settingsService.settings.hiddenAccess">
+            <ion-button
+                color="primary"
+                (click)="addPw()">
+                <ng-container *ngIf="!settingsService.settings.passwordHash"
+                    >{{'Add Password' |translate}}</ng-container
+                >
+                <ng-container *ngIf="settingsService.settings.passwordHash"
+                    >{{'Change Password' |translate}}</ng-container
+                >
+            </ion-button>
+        </div>
+    </div> 
+
+     <div
+        class="box flex flex-col shadow-xl rounded-xl mt-3 overflow-hidden mb-5 bg-white p-3">
+        <ion-button
+            color="primary"
+            (click)="checkForUpdates()">
+            {{'Check for updates'|translate}}
+        </ion-button>
+    </div>
+ </ion-content> 
+
