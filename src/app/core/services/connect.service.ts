@@ -958,7 +958,7 @@ export class ConnectService {
         } catch {}
     }
 
-  async reconnect() {
+ async reconnect() {
     const win = this.electronService.window;
     try { win.restore(); } catch {}
     
@@ -966,6 +966,7 @@ export class ConnectService {
     const savedId = this.id;
     
     this.connected = false;
+    this.dialog = false;  
 
     if (this.cameraStream) this.cameraStream.getTracks().forEach(track => track.stop());
     if (this.screenStream) this.screenStream.getTracks().forEach(track => track.stop());
@@ -979,8 +980,7 @@ export class ConnectService {
     this.removeChatWindow();
 
     await this.destroy();
-    
-    // ✅ FIX: Restore the ID after destroy
+  
     this.id = savedId;
     this.idArray = ('' + this.id).split('');
     
