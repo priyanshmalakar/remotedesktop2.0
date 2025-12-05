@@ -19,10 +19,10 @@ import * as path from 'path';
 import * as url from 'url';
 
 
-const isDev = process.env.NODE_ENV !== 'production';
-if (isDev) {
-    require('dotenv').config();
-}
+// const isDev = process.env.NODE_ENV !== 'production';
+// if (isDev) {
+//     require('dotenv').config();
+// }
 
 require('@electron/remote/main').initialize();
 
@@ -169,7 +169,7 @@ async function createWindow(): Promise<Electron.BrowserWindow> {
     });
 
     if (serve) {
-        win.webContents.openDevTools();
+        // win.webContents.openDevTools();
         require('electron-reload')(__dirname, {
             electron: require(`${__dirname}/node_modules/electron`),
         });
@@ -184,7 +184,7 @@ async function createWindow(): Promise<Electron.BrowserWindow> {
         );
     }
 
-    win.webContents.openDevTools();
+    // win.webContents.openDevTools();
 
     // Emitted when the window is closed.
     win.on('closed', () => {
@@ -196,7 +196,7 @@ async function createWindow(): Promise<Electron.BrowserWindow> {
 
     win.webContents.on('before-input-event', (event, input) => {
         if (input.control && input.shift && input.key.toLowerCase() === 'i') {
-            win.webContents.openDevTools();
+            // win.webContents.openDevTools();
             event.preventDefault();
         }
     });

@@ -42,10 +42,10 @@ var electron_1 = require("electron");
 var electron_updater_1 = require("electron-updater");
 var path = require("path");
 var url = require("url");
-var isDev = process.env.NODE_ENV !== 'production';
-if (isDev) {
-    require('dotenv').config();
-}
+// const isDev = process.env.NODE_ENV !== 'production';
+// if (isDev) {
+//     require('dotenv').config();
+// }
 require('@electron/remote/main').initialize();
 electron_1.ipcMain.handle('DESKTOP_CAPTURER_GET_SOURCES', function (event, opts) {
     return electron_1.desktopCapturer.getSources(opts);
@@ -174,7 +174,7 @@ function createWindow() {
                 win.show();
             });
             if (serve) {
-                win.webContents.openDevTools();
+                // win.webContents.openDevTools();
                 require('electron-reload')(__dirname, {
                     electron: require("".concat(__dirname, "/node_modules/electron")),
                 });
@@ -187,7 +187,7 @@ function createWindow() {
                     slashes: true,
                 }));
             }
-            win.webContents.openDevTools();
+            // win.webContents.openDevTools();
             // Emitted when the window is closed.
             win.on('closed', function () {
                 // Dereference the window object, usually you would store window
@@ -197,7 +197,7 @@ function createWindow() {
             });
             win.webContents.on('before-input-event', function (event, input) {
                 if (input.control && input.shift && input.key.toLowerCase() === 'i') {
-                    win.webContents.openDevTools();
+                    // win.webContents.openDevTools();
                     event.preventDefault();
                 }
             });
