@@ -958,27 +958,35 @@ export class ConnectService {
         } catch {}
     }
 
-    async reconnect() {
-        const win = this.electronService.window;
-        try { win.restore(); } catch {}
-        this.connected = false;
+  async reconnect() {
+    const win = this.electronService.window;
+    try { win.restore(); } catch {}
+    
+    // ✅ FIX: Save the current ID before destroying
+    const savedId = this.id;
+    
+    this.connected = false;
 
-        if (this.cameraStream) this.cameraStream.getTracks().forEach(track => track.stop());
-        if (this.screenStream) this.screenStream.getTracks().forEach(track => track.stop());
+    if (this.cameraStream) this.cameraStream.getTracks().forEach(track => track.stop());
+    if (this.screenStream) this.screenStream.getTracks().forEach(track => track.stop());
 
-        const localVideo = document.getElementById('localUserVideo');
-        const remoteVideo = document.getElementById('remoteUserVideo');
-        if (localVideo) localVideo.remove();
-        if (remoteVideo) remoteVideo.remove();
+    const localVideo = document.getElementById('localUserVideo');
+    const remoteVideo = document.getElementById('remoteUserVideo');
+    if (localVideo) localVideo.remove();
+    if (remoteVideo) remoteVideo.remove();
 
-        // Remove chat
-        this.removeChatWindow();
+    // Remove chat
+    this.removeChatWindow();
 
-        await this.destroy();
-        setTimeout(() => this.init(), 500);
-        this.connectHelperService.closeInfoWindow();
-    }
-
+    await this.destroy();
+    
+    // ✅ FIX: Restore the ID after destroy
+    this.id = savedId;
+    this.idArray = ('' + this.id).split('');
+    
+    setTimeout(() => this.init(), 500);
+    this.connectHelperService.closeInfoWindow();
+}
     async destroy() {
         this.initialized = false;
         try { await this.peer1?.destroy(); } catch {}
