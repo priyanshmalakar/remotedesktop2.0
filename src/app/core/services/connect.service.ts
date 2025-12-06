@@ -816,45 +816,60 @@ export class ConnectService {
         });
     }
 
-    async startLocalCamera() {
-        try {
-            this.cameraStream = await navigator.mediaDevices.getUserMedia({
-                video: true,
-                audio: true
+async startLocalCamera() {
+    try {
+        console.log('[CONNECT] 🎤 Requesting camera + mic...');
+        
+        this.cameraStream = await navigator.mediaDevices.getUserMedia({
+            video: true,
+            audio: true
+        });
+
+        console.log('[CONNECT] ✅ Got stream with tracks:', {
+            video: this.cameraStream.getVideoTracks().length,
+            audio: this.cameraStream.getAudioTracks().length
+        });
+
+        if (this.peer1 && this.cameraStream) {
+            console.log('[CONNECT] 📤 Adding camera tracks to peer...');
+            this.cameraStream.getTracks().forEach((track, index) => {
+                console.log(`[CONNECT] 📤 Track ${index}:`, track.kind, track.label);
+                try { 
+                    this.peer1.addTrack(track, this.cameraStream!); 
+                } catch (e) {
+                    console.error('[CONNECT] ❌ Failed to add track:', e);
+                }
             });
-
-            if (this.peer1 && this.cameraStream) {
-                this.cameraStream.getTracks().forEach(track => {
-                    try { this.peer1.addTrack(track, this.cameraStream!); } catch {}
-                });
-            }
-
-            let localVideo = document.getElementById('localUserVideo') as HTMLVideoElement;
-            if (!localVideo) {
-                localVideo = document.createElement('video');
-                localVideo.id = 'localUserVideo';
-                localVideo.autoplay = true;
-                localVideo.muted = true;
-                localVideo.style.position = 'fixed';
-                localVideo.style.bottom = '10px';
-                localVideo.style.right = '10px';
-                localVideo.style.width = '150px';
-                localVideo.style.height = '110px';
-                localVideo.style.borderRadius = '12px';
-                localVideo.style.border = '2px solid white';
-                localVideo.style.zIndex = '9999';
-                localVideo.style.objectFit = 'cover';
-                document.body.appendChild(localVideo);
-            }
-            localVideo.srcObject = this.cameraStream;
-            localVideo.play();
-            return this.cameraStream;
-        } catch (err) {
-            console.warn('[CONNECT] camera not available', err);
-            return null;
+            console.log('[CONNECT] ✅ All tracks added to peer');
+        } else {
+            console.error('[CONNECT] ❌ Cannot add tracks - peer or stream missing');
         }
-    }
 
+        let localVideo = document.getElementById('localUserVideo') as HTMLVideoElement;
+        if (!localVideo) {
+            localVideo = document.createElement('video');
+            localVideo.id = 'localUserVideo';
+            localVideo.autoplay = true;
+            localVideo.muted = true;
+            localVideo.style.position = 'fixed';
+            localVideo.style.bottom = '10px';
+            localVideo.style.right = '10px';
+            localVideo.style.width = '150px';
+            localVideo.style.height = '110px';
+            localVideo.style.borderRadius = '12px';
+            localVideo.style.border = '2px solid white';
+            localVideo.style.zIndex = '9999';
+            localVideo.style.objectFit = 'cover';
+            document.body.appendChild(localVideo);
+        }
+        localVideo.srcObject = this.cameraStream;
+        localVideo.play();
+        return this.cameraStream;
+    } catch (err) {
+        console.error('[CONNECT] ❌ getUserMedia FAILED:', err.name, err.message);
+        return null;
+    }
+}
     async askForConnectPermission() {
         return new Promise(async resolve => {
             const alert = await this.alertCtrl.create({
@@ -961,8 +976,7 @@ export class ConnectService {
  async reconnect() {
     const win = this.electronService.window;
     try { win.restore(); } catch {}
-    
-    // ✅ FIX: Save the current ID before destroying
+  
     const savedId = this.id;
     
     this.connected = false;
