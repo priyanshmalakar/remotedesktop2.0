@@ -4,7 +4,17 @@
       <ion-buttons slot="start">
         <ion-menu-button class="text-blue-900"></ion-menu-button>
       </ion-buttons>
-      <ion-title class="!text-blue-900 !font-bold !text-xl">RemoteControl</ion-title>
+
+<ion-title class="!text-blue-900 !font-bold !text-xl">
+  <div class="flex items-center gap-2">
+    <img
+      src="assets/Only_ProtoMart.png"
+      alt="Logo"
+      class="h-7 w-auto object-contain" />
+    <span>RemoteControl</span>
+  </div>
+</ion-title>
+
       <ion-buttons slot="end" class="mr-3">
         <ion-spinner
           *ngIf="connectService.fileLoading"
