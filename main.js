@@ -174,7 +174,7 @@ function createWindow() {
                 win.show();
             });
             if (serve) {
-                // win.webContents.openDevTools();
+                win.webContents.openDevTools();
                 require('electron-reload')(__dirname, {
                     electron: require("".concat(__dirname, "/node_modules/electron")),
                 });
