@@ -119,8 +119,8 @@ export class RemotePage implements OnInit, OnDestroy {
     cursor = true;
     transfer;
     files: any = {};
-    isMuted = true;
-    videoOn = false;
+   isMuted = true;      // Start with mic MUTED
+videoOn = false;     // Start with camera OFF
 
     fileProgress = 0;
     localStream: MediaStream | null = null;
@@ -320,20 +320,27 @@ export class RemotePage implements OnInit, OnDestroy {
     }
 
     toggleAudio() {
-        if (!this.localStream) return;
-        this.isMuted = !this.isMuted;
-        this.localStream
-            .getAudioTracks()
-            .forEach(track => (track.enabled = !this.isMuted));
-    }
+    if (!this.localStream) return;
+    this.isMuted = !this.isMuted;
+    const newState = !this.isMuted; // if not muted, enable
+    this.localStream
+        .getAudioTracks()
+        .forEach(track => {
+            track.enabled = newState;
+            console.log('[REMOTE] 🎤 Mic:', newState ? 'ON' : 'OFF');
+        });
+}
 
     toggleVideo() {
-        if (!this.localStream) return;
-        this.videoOn = !this.videoOn;
-        this.localStream
-            .getVideoTracks()
-            .forEach(track => (track.enabled = this.videoOn));
-    }
+    if (!this.localStream) return;
+    this.videoOn = !this.videoOn;
+    this.localStream
+        .getVideoTracks()
+        .forEach(track => {
+            track.enabled = this.videoOn;
+            console.log('[REMOTE] 📹 Camera:', this.videoOn ? 'ON' : 'OFF');
+        });
+}
 
     endCall() {
         this.stopVideoCall();
@@ -413,13 +420,18 @@ export class RemotePage implements OnInit, OnDestroy {
         }
     }
 
-    async startVideoCall() {
-        try {
-            console.log('[REMOTE] 🎥 Starting local video...');
-            this.localStream = await navigator.mediaDevices.getUserMedia({
-                video: true,
-                audio: true,
-            });
+async startVideoCall() {
+    try {
+        console.log('[REMOTE] 🎥 Starting local video (initially disabled)...');
+        this.localStream = await navigator.mediaDevices.getUserMedia({
+            video: true,
+            audio: true,
+        });
+
+        // Disable tracks by default
+        this.localStream.getVideoTracks().forEach(track => track.enabled = false);
+        this.localStream.getAudioTracks().forEach(track => track.enabled = false);
+        console.log('[REMOTE] 🔒 Camera and mic disabled by default');
 
             const localVideo = this.localVideoRef?.nativeElement;
             if (localVideo) {

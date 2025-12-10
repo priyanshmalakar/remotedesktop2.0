@@ -252,157 +252,6 @@ console.log('[CONNECT] ✅ Screen tracks added. Camera will be added when enable
 }
 
 
-//workuing befire code but not working when i run second time
-
-    // async videoConnector() {
-    //     // close any loader
-    //     try { this.loading?.dismiss(); } catch {}
-
-    //     // SCREEN SHARE stream
-    //     const source = this.videoSource;
-    //     this.screenStream = source.stream;
-
-    //     this.peer1 = new SimplePeer({
-    //         initiator: true,
-    //         stream: this.screenStream,
-    //         config: {
-    //             iceServers: [
-    //                 { urls: "stun:stun.relay.metered.ca:80" },
-    //                 {
-    //                     urls: "turn:global.relay.metered.ca:80",
-    //                     username: "63549d560f2efcb312cd67de",
-    //                     credential: "qh7UD1VgYnwSWhmQ",
-    //                 },
-    //                 {
-    //                     urls: "turn:global.relay.metered.ca:80?transport=tcp",
-    //                     username: "63549d560f2efcb312cd67de",
-    //                     credential: "qh7UD1VgYnwSWhmQ",
-    //                 },
-    //                 {
-    //                     urls: "turn:global.relay.metered.ca:443",
-    //                     username: "63549d560f2efcb312cd67de",
-    //                     credential: "qh7UD1VgYnwSWhmQ",
-    //                 },
-    //                 {
-    //                     urls: "turns:global.relay.metered.ca:443?transport=tcp",
-    //                     username: "63549d560f2efcb312cd67de",
-    //                     credential: "qh7UD1VgYnwSWhmQ",
-    //                 },
-    //             ],
-    //         },
-    //     });
-
-    //     this.peer1.on('signal', data => {
-    //         this.socketService.sendMessage(data);
-    //     });
-
-    //     this.peer1.on('error', (err) => {
-    //         console.error('[CONNECT] peer error', err);
-    //         this.reconnect();
-    //     });
-
-    //     this.peer1.on('close', () => {
-    //         this.reconnect();
-    //     });
-
-    //     this.peer1.on('connect', async () => {
-    //         this.connected = true;
-    //         this.clipboardListener();
-    //         this.connectHelperService.showInfoWindow();
-    //         const win = this.electronService.window;
-    //         try { win.minimize(); } catch {}
-
-    //         // Show chat windows for both roles on this side (host+user panes)
-    //         this.createDualChatUI();
-
-    //         setTimeout(async () => {
-    //             await this.startLocalCamera();
-    //         }, 1000);
-    //     });
-
-    //     this.peer1.on('stream', (remoteStream) => {
-    //         let remoteVideo = document.getElementById('remoteUserVideo') as HTMLVideoElement;
-    //         if (!remoteVideo) {
-    //             remoteVideo = document.createElement('video');
-    //             remoteVideo.id = 'remoteUserVideo';
-    //             remoteVideo.autoplay = true;
-    //             remoteVideo.style.position = 'fixed';
-    //             remoteVideo.style.bottom = '10px';
-    //             remoteVideo.style.left = '10px';
-    //             remoteVideo.style.width = '200px';
-    //             remoteVideo.style.height = '150px';
-    //             remoteVideo.style.borderRadius = '12px';
-    //             remoteVideo.style.border = '2px solid white';
-    //             remoteVideo.style.zIndex = '9999';
-    //             remoteVideo.style.objectFit = 'cover';
-    //             document.body.appendChild(remoteVideo);
-    //         }
-    //         remoteVideo.srcObject = remoteStream;
-    //         remoteVideo.play().catch(e => console.error('[CONNECT] Play error:', e));
-    //     });
-
-    //     this.peer1.on('data', async data => {
-    //         if (data) {
-    //             try {
-    //                 const fileTransfer = data.toString();
-
-    //                 if (fileTransfer.substr(0, 5) === 'file-') {
-    //                     const fileID = fileTransfer.substr(5);
-    //                     this.spf
-    //                         .receive(this.peer1, fileID)
-    //                         .then((transfer: any) => {
-    //                             this.fileLoading = true;
-    //                             transfer.on('progress', p => {});
-    //                             transfer.on('done', file => {
-    //                                 this.fileLoading = false;
-    //                                 const element = document.createElement('a');
-    //                                 element.href = URL.createObjectURL(file);
-    //                                 element.download = file.name;
-    //                                 element.click();
-    //                             });
-    //                         });
-    //                     this.peer1.send(`start-${fileID}`);
-    //                     return;
-    //                 }
-
-    //                 if (fileTransfer.substr(0, 10) === 'clipboard-') {
-    //                     const text = fileTransfer.substr(10);
-    //                     this.electronService.clipboard.writeText(text);
-    //                     return;
-    //                 }
-
-    //                 // Chat message handling (new: support chat-host- and chat-user- prefixes)
-    //                 const text = new TextDecoder('utf-8').decode(data);
-    //                 if (text.startsWith("chat-host-")) {
-    //                     const message = text.replace("chat-host-", "");
-    //                     // show in host pane as remote-host message
-    //                     this.addChatMessage("Remote (Host)", message, "host");
-    //                     return;
-    //                 } else if (text.startsWith("chat-user-")) {
-    //                     const message = text.replace("chat-user-", "");
-    //                     // show in user pane as remote-user message
-    //                     this.addChatMessage("Remote (User)", message, "user");
-    //                     return;
-    //                 }
-
-    //                 // Keyboard / Scroll / Mouse handling
-    //                 if (text.substring(0, 1) == '{') {
-    //                     const keyData = JSON.parse(text);
-    //                     await this.connectHelperService.handleKey(keyData);
-    //                 } else if (text.substring(0, 1) == 's') {
-    //                     this.connectHelperService.handleScroll(text);
-    //                 } else {
-    //                     this.connectHelperService.handleMouse(text);
-    //                 }
-
-    //             } catch (error) {
-    //                 console.error('[CONNECT] data handler error', error);
-    //             }
-    //         }
-    //     });
-    // }
-
-
   async startLocalCamera() {
     try {
         console.log('[CONNECT] 🎤 Requesting camera + mic...');
@@ -465,7 +314,6 @@ this.cameraStream = await navigator.mediaDevices.getUserMedia(constraints);
         return null;
     }
 }
-
 async toggleHostCamera() {
     this.hostCameraEnabled = !this.hostCameraEnabled;
     console.log('[CONNECT] 📹 Host camera:', this.hostCameraEnabled ? 'ON' : 'OFF');
@@ -475,11 +323,13 @@ async toggleHostCamera() {
         if (!this.cameraStream) {
             // Need to get stream for first time
             try {
-                console.log('[CONNECT] 🎥 Requesting camera with mic:', this.hostMicEnabled);
+                console.log('[CONNECT] 🎥 Requesting camera (with mic if already enabled)');
                 
                 const constraints: any = { video: true };
+                // IMPORTANT: If mic was already enabled separately, we need to request it again
+                // because we're creating a brand new stream
                 if (this.hostMicEnabled) {
-                    constraints.audio = true; // Only add audio if mic is also enabled
+                    constraints.audio = true;
                 }
                 
                 this.cameraStream = await navigator.mediaDevices.getUserMedia(constraints);
@@ -504,14 +354,23 @@ async toggleHostCamera() {
                 this.hostCameraEnabled = false;
                 alert('Failed to access camera: ' + err.message);
             }
-        } else {
-            // Just enable existing video track
+      } else {
+            // Re-enable existing video track (if it exists)
             console.log('[CONNECT] ✅ Re-enabling existing video track');
             const videoTracks = this.cameraStream.getVideoTracks();
-            videoTracks.forEach(track => {
-                track.enabled = true;
-                console.log('[CONNECT] Track enabled:', track.label);
-            });
+            if (videoTracks.length > 0) {
+                videoTracks.forEach(track => {
+                    track.enabled = true;
+                    console.log('[CONNECT] ✅ Re-enabled video track:', track.label);
+                });
+            } else {
+                // Video track doesn't exist in stream, need to get new stream
+                console.warn('[CONNECT] ⚠️ No video track exists, getting new stream...');
+                this.hostCameraEnabled = false; // Reset state
+                this.cameraStream = null;
+                await this.toggleHostCamera(); // Recursively call to get new stream
+                return;
+            }
         }
     } else {
         // Disable video track (don't stop it)
@@ -522,7 +381,6 @@ async toggleHostCamera() {
         }
     }
 }
-
 async toggleHostMic() {
     this.hostMicEnabled = !this.hostMicEnabled;
     console.log('[CONNECT] 🎤 Host mic:', this.hostMicEnabled ? 'ON' : 'OFF');
@@ -532,11 +390,15 @@ async toggleHostMic() {
         if (!this.cameraStream) {
             // Need to get stream for first time
             try {
-                this.cameraStream = await navigator.mediaDevices.getUserMedia({
-                    video: this.hostCameraEnabled,  // Get camera too if it's enabled
-                    audio: true
-                });
+                console.log('[CONNECT] 🎤 Requesting mic (with camera if already enabled)');
                 
+                const constraints: any = { audio: true };
+                // IMPORTANT: If camera was already enabled separately, request it too
+                if (this.hostCameraEnabled) {
+                    constraints.video = true;
+                }
+                
+                this.cameraStream = await navigator.mediaDevices.getUserMedia(constraints);
                 // Add tracks to peer
                 if (this.peer1 && this.cameraStream) {
                     this.cameraStream.getTracks().forEach((track) => {
@@ -552,9 +414,21 @@ async toggleHostMic() {
                 this.hostMicEnabled = false;
             }
         } else {
-            // Just enable existing audio track
+            // Re-enable existing audio track (if it exists)
             const audioTracks = this.cameraStream.getAudioTracks();
-            audioTracks.forEach(track => track.enabled = true);
+            if (audioTracks.length > 0) {
+                audioTracks.forEach(track => {
+                    track.enabled = true;
+                    console.log('[CONNECT] ✅ Re-enabled audio track:', track.label);
+                });
+            } else {
+                // Audio track doesn't exist in stream, need to get new stream
+                console.warn('[CONNECT] ⚠️ No audio track exists, getting new stream...');
+                this.hostMicEnabled = false; // Reset state
+                this.cameraStream = null;
+                await this.toggleHostMic(); // Recursively call to get new stream
+                return;
+            }
         }
     } else {
         // Disable audio track
@@ -565,7 +439,6 @@ async toggleHostMic() {
     }
 }
 
-// NEW helper method - add this
 private showLocalVideoPreview() {
     if (!this.cameraStream) {
         console.warn('[CONNECT] ⚠️ No camera stream to preview');
