@@ -1,587 +1,3 @@
-// /* eslint-disable @typescript-eslint/await-thenable */
-// /* eslint-disable @typescript-eslint/no-inferrable-types */
-// import { Injectable } from '@angular/core';
-// import { AlertController, LoadingController } from '@ionic/angular';
-// import { Subscription } from 'rxjs';
-// import SimplePeer from 'simple-peer';
-// import SimplePeerFiles from 'simple-peer-files';
-// import * as url from 'url';
-// import { AppConfig } from '../../../environments/environment';
-// /* eslint-disable @typescript-eslint/restrict-template-expressions */
-// import { ConnectHelperService } from './connect-helper.service';
-// /* eslint-disable @typescript-eslint/restrict-plus-operands */
-// import { ElectronService } from './electron.service';
-// import { SettingsService } from './settings.service';
-// /* eslint-disable @typescript-eslint/no-misused-promises */
-// import { SocketService } from './socket.service';
-// import { TranslateService } from '@ngx-translate/core';
-// import { keyboard } from '@nut-tree-fork/nut-js';
-
-// @Injectable({
-//     providedIn: 'root',
-// })
-// export class ConnectService {
-//     peer1: SimplePeer.Instance;
-//     spf: SimplePeerFiles;
-//     socketSub: Subscription;
-//     sub2: Subscription;
-//     sub3: Subscription;
-//     videoSource;
-//     transfer;
-
-//     initialized = false;
-//     loading;
-//     dialog;
-//     connected: boolean = false;
-
-//     id: string = '';
-//     idArray: string[] = [];
-//     remoteIdArray: any = [{}, {}, {}, {}, {}, {}, {}, {}, {}];
-//     remoteId: string = '';
-//     fileLoading = false;
-//     cameraStream: MediaStream | null = null;
-//     screenStream: MediaStream | null = null;
-
-//     constructor(
-//         private electronService: ElectronService,
-//         private socketService: SocketService,
-//         private connectHelperService: ConnectHelperService,
-//         private loadingCtrl: LoadingController,
-//         private settingsService: SettingsService,
-//         private alertCtrl: AlertController
-//     ) {}
-
-//     clipboardListener() {
-//         const clipboard = this.electronService.clipboard;
-//         clipboard
-//             .on('text-changed', () => {
-//                 if (this.peer1 && this.connected) {
-//                     const currentText = clipboard.readText();
-//                     console.log('[CONNECT] 📋 Clipboard text changed');
-//                     this.peer1.send('clipboard-' + currentText);
-//                 }
-//             })
-//             .on('image-changed', () => {
-//                 const currentImage = clipboard.readImage();
-//                 console.log('[CONNECT] 📋 Clipboard image changed');
-//             })
-//             .startWatching();
-//     }
-
-//     setId(id) {
-//         if (id.length == 9) {
-//             const idArray = id.split('').map(number => {
-//                 return Number(number);
-//             });
-
-//             idArray.forEach((number, index) => {
-//                 this.remoteIdArray[index] = { number };
-//             });
-//         }
-//     }
-
-//     sendScreenSize() {
-//         const scaleFactor =
-//             process.platform === 'darwin'
-//                 ? 1
-//                 : this.electronService.remote.screen.getPrimaryDisplay()
-//                       .scaleFactor;
-
-//         const { width, height } =
-//             this.electronService.remote.screen.getPrimaryDisplay().size;
-        
-//         const finalWidth = width * scaleFactor;
-//         const finalHeight = height * scaleFactor;
-        
-//         console.log('[CONNECT] 📐 Sending screen size:', finalWidth, 'x', finalHeight);
-//         this.socketService.sendMessage(`screenSize,${finalWidth},${finalHeight}`);
-//     }
-
-//    async videoConnector() {
-//     this.loading.dismiss();
-    
-//     // Get SCREEN SHARE stream first (this is what the remote user will control)
-//     const source = this.videoSource;
-//     this.screenStream = source.stream;
-    
-//     console.log('[CONNECT] 🖥️ Creating peer with SCREEN SHARE stream');
-
-//     this.peer1 = new SimplePeer({
-//         initiator: true,
-//         stream: this.screenStream, // Share SCREEN first - this ensures screen is track 0
-//         config: {
-//             iceServers: [
-//                 { urls: "stun:stun.relay.metered.ca:80" },
-//                 {
-//                     urls: "turn:global.relay.metered.ca:80",
-//                     username: "63549d560f2efcb312cd67de",
-//                     credential: "qh7UD1VgYnwSWhmQ",
-//                 },
-//                 {
-//                     urls: "turn:global.relay.metered.ca:80?transport=tcp",
-//                     username: "63549d560f2efcb312cd67de",
-//                     credential: "qh7UD1VgYnwSWhmQ",
-//                 },
-//                 {
-//                     urls: "turn:global.relay.metered.ca:443",
-//                     username: "63549d560f2efcb312cd67de",
-//                     credential: "qh7UD1VgYnwSWhmQ",
-//                 },
-//                 {
-//                     urls: "turns:global.relay.metered.ca:443?transport=tcp",
-//                     username: "63549d560f2efcb312cd67de",
-//                     credential: "qh7UD1VgYnwSWhmQ",
-//                 },
-//             ],
-//         },
-//     });
-    
-//     console.log('[CONNECT] ✅ SimplePeer instance created with screen stream');
-    
-//     this.peer1.on('signal', data => {
-//         console.log('[PEER] 📡 Signal generated, sending to socket...');
-//         this.socketService.sendMessage(data);
-//     });
-
-//     this.peer1.on('error', (err) => {
-//         console.error('[PEER] ❌ Error:', err);
-//         this.reconnect();
-//     });
-
-//     this.peer1.on('close', () => {
-//         console.warn('[PEER] ⚠️ Connection closed');
-//         this.reconnect();
-//     });
-
-//   this.peer1.on('connect', async () => {
-//     console.log('[PEER] ✅ Connected successfully!');
-//     this.connected = true;
-    
-//     // Start clipboard monitoring AFTER connection
-//     console.log('[PEER] 📋 Starting clipboard monitoring...');
-//     this.clipboardListener();
-    
-//     this.connectHelperService.showInfoWindow();
-//     const win = this.electronService.window;
-//     win.minimize();
-    
-//     // ⭐ IMPORTANT: Delay camera addition to ensure proper track ordering
-//     console.log('[PEER] ⏳ Waiting 1 second before adding camera...');
-//     setTimeout(async () => {
-//         console.log('[PEER] 🎥 Now adding camera tracks...');
-//         await this.startLocalCamera();
-//     }, 1000); // Increased delay to 1 second
-// });
-
-//     // Handle incoming stream from REMOTE user (their camera/mic)
-//     this.peer1.on('stream', (remoteStream) => {
-//         console.log('[PEER] 🎥 Remote stream received from remote user');
-        
-//         // Create small video element for remote user's camera (picture-in-picture)
-//         let remoteVideo = document.getElementById('remoteUserVideo') as HTMLVideoElement;
-//         if (!remoteVideo) {
-//             remoteVideo = document.createElement('video');
-//             remoteVideo.id = 'remoteUserVideo';
-//             remoteVideo.autoplay = true;
-//             remoteVideo.style.position = 'fixed';
-//             remoteVideo.style.bottom = '10px';
-//             remoteVideo.style.left = '10px';
-//             remoteVideo.style.width = '200px';
-//             remoteVideo.style.height = '150px';
-//             remoteVideo.style.borderRadius = '12px';
-//             remoteVideo.style.border = '2px solid white';
-//             remoteVideo.style.zIndex = '9999';
-//             remoteVideo.style.objectFit = 'cover';
-//             document.body.appendChild(remoteVideo);
-//         }
-        
-//         remoteVideo.srcObject = remoteStream;
-//         remoteVideo.play().catch(e => console.error('[CONNECT] Play error:', e));
-//     });
-
-//     this.peer1.on('data', async data => {
-//         if (data) {
-//             try {
-//                 const fileTransfer = data.toString();
-//                 if (fileTransfer.substr(0, 5) === 'file-') {
-//                     const fileID = fileTransfer.substr(5);
-//                     this.spf
-//                         .receive(this.peer1, fileID)
-//                         .then((transfer: any) => {
-//                             this.fileLoading = true;
-//                             transfer.on('progress', p => {
-//                                 console.log('progress', p);
-//                             });
-//                             transfer.on('done', file => {
-//                                 this.fileLoading = false;
-//                                 console.log('done', file);
-//                                 const element = document.createElement('a');
-//                                 element.href = URL.createObjectURL(file);
-//                                 element.download = file.name;
-//                                 element.click();
-//                             });
-//                         });
-//                     this.peer1.send(`start-${fileID}`);
-//                     return;
-//                 }
-
-//                 if (fileTransfer.substr(0, 10) === 'clipboard-') {
-//                     const text = fileTransfer.substr(10);
-//                     console.log('[CONNECT] 📋 Clipboard received:', text.substring(0, 50));
-//                     this.electronService.clipboard.writeText(text);
-//                     return;
-//                 }
-
-//                 // Parse the data
-//                 let text = new TextDecoder('utf-8').decode(data);
-                
-//                 // Check if it's JSON (keyboard input)
-//                 if (text.substring(0, 1) == '{') {
-//                     const keyData = JSON.parse(text);
-//                     console.log('[CONNECT] ⌨️ Keyboard event:', keyData.key);
-                    
-//                     // Pass the parsed object directly and await the handler
-//                     await this.connectHelperService.handleKey(keyData);
-//                 } else if (text.substring(0, 1) == 's') {
-//                     // Scroll event
-//                     const parts = text.split(',');
-//                     console.log('[CONNECT] 📜 Scroll event:', parts[1]);
-//                     this.connectHelperService.handleScroll(text);
-//                 } else {
-//                     // Mouse event
-//                     const parts = text.split(',');
-//                     console.log('[CONNECT] 🖱️ Mouse event:', parts[0]);
-//                     this.connectHelperService.handleMouse(text);
-//                 }
-//             } catch (error) {
-//                 console.error('[CONNECT] Error handling data:', error);
-//             }
-//         }
-//     });
-// }
-
-       
-
-//    async startLocalCamera() {
-//     try {
-//         console.log('[CONNECT] 🎥 Starting local camera & microphone...');
-//         this.cameraStream = await navigator.mediaDevices.getUserMedia({
-//             video: true,
-//             audio: true
-//         });
-
-//         console.log('[CONNECT] ✅ Camera stream obtained:', {
-//             videoTracks: this.cameraStream.getVideoTracks().length,
-//             audioTracks: this.cameraStream.getAudioTracks().length
-//         });
-
-//         // Add camera tracks to existing peer connection (screen already shared)
-//         if (this.peer1 && this.cameraStream) {
-//             console.log('[CONNECT] 📤 Adding camera tracks to peer...');
-//             this.cameraStream.getTracks().forEach((track, index) => {
-//                 console.log(`[CONNECT] 📤 Adding track ${index}:`, track.kind, track.label);
-//                 this.peer1.addTrack(track, this.cameraStream!);
-//             });
-//             console.log('[CONNECT] ✅ All camera & mic tracks added to peer');
-//         } else {
-//             console.error('[CONNECT] ❌ Cannot add tracks - peer or stream missing');
-//         }
-
-//         // Create local video preview (self-view) - bottom-right
-//         let localVideo = document.getElementById('localUserVideo') as HTMLVideoElement;
-//         if (!localVideo) {
-//             console.log('[CONNECT] 📺 Creating local video preview element...');
-//             localVideo = document.createElement('video');
-//             localVideo.id = 'localUserVideo';
-//             localVideo.autoplay = true;
-//             localVideo.muted = true; // mute self to avoid echo
-//             localVideo.style.position = 'fixed';
-//             localVideo.style.bottom = '10px';
-//             localVideo.style.right = '10px';
-//             localVideo.style.width = '150px';
-//             localVideo.style.height = '110px';
-//             localVideo.style.borderRadius = '12px';
-//             localVideo.style.border = '2px solid white';
-//             localVideo.style.zIndex = '9999';
-//             localVideo.style.objectFit = 'cover';
-//             document.body.appendChild(localVideo);
-//         }
-        
-//         localVideo.srcObject = this.cameraStream;
-//         localVideo.play()
-//             .then(() => console.log('[CONNECT] ✅ Local video preview playing'))
-//             .catch(e => console.error('[CONNECT] ❌ Local play error:', e));
-
-//         return this.cameraStream;
-//     } catch (err) {
-//         console.error('[CONNECT] ❌ Could not start local camera:', err);
-//         return null;
-//     }
-// }
-
-//     async askForConnectPermission() {
-//         return new Promise(async resolve => {
-//             const alert = await this.alertCtrl.create({
-//                 header: 'New connection',
-//                 message: 'Do you want to accept the connection?',
-//                 buttons: [
-//                     {
-//                         text: 'Cancel',
-//                         role: 'cancel',
-//                         handler: () => {
-//                             resolve(false);
-//                         },
-//                     },
-//                     {
-//                         text: 'Accept',
-//                         handler: () => {
-//                             resolve(true);
-//                         },
-//                     },
-//                 ],
-//             });
-
-//             await alert.present();
-//         });
-//     }
-
-//     async generateId() {
-//         if (this.settingsService.settings?.randomId) {
-//             this.id = `${this.connectHelperService.threeDigit()}${this.connectHelperService.threeDigit()}${this.connectHelperService.threeDigit()}`;
-//         } else {
-//             const nodeMachineId = this.electronService.nodeMachineId;
-//             const id = await nodeMachineId.machineId();
-//             const uniqId = parseInt(id, 36).toString().substring(3, 12);
-//             this.id = uniqId;
-//         }
-//         this.idArray = ('' + this.id).split('');
-//     }
-
-//     async init() {
-//         if (this.initialized) {
-//             return;
-//         }
-        
-//         this.initialized = true;
-//         await this.generateId();
-//         console.log('[CONNECT] 🎯 Generated ID:', this.id);
-//         console.log('[CONNECT] Initializing socket service...');
-
-//         // Test keyboard (no dynamic import needed)
-//         if (this.electronService.isElectron) {
-//             console.log('[CONNECT] Testing keyboard...');
-//             try {
-//                 await keyboard.type('');
-//                 console.log('[CONNECT] ✅ Keyboard working!');
-//             } catch (err) {
-//                 console.error('[CONNECT] ❌ Keyboard test failed:', err);
-//             }
-//         }
-
-//         this.loading = await this.loadingCtrl.create({
-//             duration: 15000,
-//         });
-
-//         // Listen for display changes
-//         this.electronService.remote.screen.addListener(
-//             'display-metrics-changed',
-//             () => {
-//                 this.sendScreenSize();
-//             }
-//         );
-
-//         this.spf = new SimplePeerFiles();
-
-//         this.socketService.init();
-//         this.socketService.joinRoom(this.id);
-
-//         this.sub3 = this.socketService.onDisconnected().subscribe(async () => {
-//             console.log('[DISCONNECT] Remote peer disconnected');
-//             const alert = await this.alertCtrl.create({
-//                 header: 'Info',
-//                 message: 'Connection was terminated',
-//                 buttons: ['OK'],
-//             });
-//             await alert.present();
-
-//             this.reconnect();
-//         });
-
-//         this.socketSub = this.socketService
-//             .onNewMessage()
-//             .subscribe(async (data: any) => {
-//                 console.log('[CONNECT] 📨 Socket message received:', typeof data === 'string' ? data : 'signal');
-                
-//                 if (typeof data == 'string' && data == 'hi') {
-//                     if (this.dialog) return; 
-//                     this.dialog = true;
-//                     console.log('[CONNECT] 👋 Received connection request');
-//                     this.sendScreenSize();
-
-//                     if (this.settingsService.settings?.hiddenAccess) {
-//                         this.socketService.sendMessage('pwRequest');
-//                         return;
-//                     } else {
-//                         const win = this.electronService.window;
-//                         win.show();
-//                         win.focus();
-//                         win.restore();
-
-//                         const result = await this.askForConnectPermission();
-//                         this.dialog = false;
-
-//                         if (!result) {
-//                             this.socketService.sendMessage('decline');
-//                             this.loading.dismiss();
-//                             return;
-//                         }
-//                         await this.videoConnector();
-//                     }
-//                 } else if (
-//                     typeof data == 'string' &&
-//                     data.substring(0, 8) == 'pwAnswer'
-//                 ) {
-//                     const pw = data.replace(data.substring(0, 9), '');
-//                     const pwCorrect =
-//                         await this.electronService.bcryptjs.compare(
-//                             pw,
-//                             this.settingsService.settings.passwordHash
-//                         );
-
-//                     if (pwCorrect) {
-//                         await this.videoConnector();
-//                     } else {
-//                         this.socketService.sendMessage('pwWrong');
-//                         this.loading.dismiss();
-                        
-//                         const alert = await this.alertCtrl.create({
-//                             header: 'Password not correct',
-//                             buttons: ['OK']
-//                         });
-//                         await alert.present();
-//                     }
-//                 } else if (
-//                     typeof data == 'string' &&
-//                     data.startsWith('decline')
-//                 ) {
-//                     this.loading.dismiss();
-//                 } else {
-//                     if (this.peer1) {
-//                         console.log('[CONNECT] 🔄 Signaling peer');
-//                         this.peer1.signal(data);
-//                     } else {
-//                         console.warn('[CONNECT] ⚠️ Received signal but peer not initialized yet');
-//                     }
-//                 }
-//             });
-//     }
-
-//     replaceVideo(stream) {
-//         this.peer1.removeStream(this.screenStream);
-//         this.screenStream = stream;
-//         this.peer1.addStream(stream);
-//     }
-
-//     async reconnect() {
-//         const win = this.electronService.window;
-//         win.restore();
-//         this.connected = false;
-        
-//         // Stop camera stream
-//         if (this.cameraStream) {
-//             this.cameraStream.getTracks().forEach(track => track.stop());
-//             this.cameraStream = null;
-//         }
-        
-//         // Stop screen stream
-//         if (this.screenStream) {
-//             this.screenStream.getTracks().forEach(track => track.stop());
-//             this.screenStream = null;
-//         }
-        
-//         // Remove video elements
-//         const localVideo = document.getElementById('localUserVideo');
-//         const remoteVideo = document.getElementById('remoteUserVideo');
-//         if (localVideo) localVideo.remove();
-//         if (remoteVideo) remoteVideo.remove();
-        
-//         await this.destroy();
-//         setTimeout(() => {
-//             this.init();
-//         }, 500);
-//         this.connectHelperService.closeInfoWindow();
-//     }
-
-//     async destroy() {
-//         this.initialized = false;
-//         await this.peer1?.destroy();
-//         await this.socketService?.destroy();
-//         await this.socketSub?.unsubscribe();
-//         await this.sub3?.unsubscribe();
-//         await this.electronService.remote.screen.removeAllListeners();
-//     }
-
-//     connect(id) {
-//         if (this.electronService.isElectronApp) {
-//             const appPath = this.electronService.remote.app.getAppPath();
-//             try {
-//                 const BrowserWindow = this.electronService.remote.BrowserWindow;
-//                 const win = new BrowserWindow({
-//                     height: 600,
-//                     width: 800,
-//                     minWidth: 250,
-//                     minHeight: 250,
-//                     titleBarStyle:
-//                         process.platform === 'darwin' ? 'hidden' : 'default',
-//                     frame: process.platform === 'darwin' ? true : false,
-//                     center: true,
-//                     show: false,
-//                     backgroundColor: '#252a33',
-//                     webPreferences: {
-//                         webSecurity: false,
-//                         nodeIntegration: true,
-//                         allowRunningInsecureContent: true,
-//                         contextIsolation: false,
-//                         enableRemoteModule: true,
-//                     } as any,
-//                 });
-
-//                 console.log('main', this.electronService.main);
-//                 this.electronService.remote
-//                     .require('@electron/remote/main')
-//                     .enable(win.webContents);
-
-//                 if (AppConfig.production) {
-//                     win.loadURL(
-//                         url.format({
-//                             pathname: this.electronService.path.join(
-//                                 appPath,
-//                                 'dist/index.html'
-//                             ),
-//                             hash: '/remote?id=' + id,
-//                             protocol: 'file:',
-//                             slashes: true,
-//                         })
-//                     );
-//                 } else {
-//                     win.loadURL('http://localhost:4200/#/remote?id=' + id);
-//                     win.webContents.openDevTools();
-//                 }
-
-//                 win.maximize();
-//                 win.show();
-//                 win.on('closed', () => {});
-//             } catch (error) {
-//                 console.log('error', error);
-//             }
-//         } else {
-//             window.open('http://192.168.1.30:4200/#/remote?id=' + id, '_blank');
-//         }
-//     }
-// }
-
-
-
 import { Injectable } from '@angular/core';
 import { AlertController, LoadingController } from '@ionic/angular';
 import { Subscription } from 'rxjs';
@@ -618,6 +34,8 @@ export class ConnectService {
     fileLoading = false;
     cameraStream: MediaStream | null = null;
     screenStream: MediaStream | null = null;
+    hostCameraEnabled = false;
+hostMicEnabled = false;
 
     constructor(
         private electronService: ElectronService,
@@ -669,167 +87,345 @@ export class ConnectService {
     }
 
     async videoConnector() {
-        // close any loader
-        try { this.loading?.dismiss(); } catch {}
+    try { this.loading?.dismiss(); } catch {}
 
-        // SCREEN SHARE stream
-        const source = this.videoSource;
-        this.screenStream = source.stream;
+// ⭐ Don't start camera automatically - wait for user to enable it
+console.log('[CONNECT] 🎥 Camera/mic will start when user enables them');
+this.cameraStream = null; // Start with no camera
 
-        this.peer1 = new SimplePeer({
-            initiator: true,
-            stream: this.screenStream,
-            config: {
-                iceServers: [
-                    { urls: "stun:stun.relay.metered.ca:80" },
-                    {
-                        urls: "turn:global.relay.metered.ca:80",
-                        username: "63549d560f2efcb312cd67de",
-                        credential: "qh7UD1VgYnwSWhmQ",
-                    },
-                    {
-                        urls: "turn:global.relay.metered.ca:80?transport=tcp",
-                        username: "63549d560f2efcb312cd67de",
-                        credential: "qh7UD1VgYnwSWhmQ",
-                    },
-                    {
-                        urls: "turn:global.relay.metered.ca:443",
-                        username: "63549d560f2efcb312cd67de",
-                        credential: "qh7UD1VgYnwSWhmQ",
-                    },
-                    {
-                        urls: "turns:global.relay.metered.ca:443?transport=tcp",
-                        username: "63549d560f2efcb312cd67de",
-                        credential: "qh7UD1VgYnwSWhmQ",
-                    },
-                ],
-            },
-        });
+// Get screen stream (THIS MUST HAPPEN!)
+const source = this.videoSource;
+this.screenStream = source.stream;
 
-        this.peer1.on('signal', data => {
-            this.socketService.sendMessage(data);
-        });
+if (!this.screenStream) {
+    console.error('[CONNECT] ❌ Failed to get screen stream, aborting');
+    return;
+}
+    
+    console.log('[CONNECT] 🖥️ Creating peer with ALL tracks at once...');
 
-        this.peer1.on('error', (err) => {
-            console.error('[CONNECT] peer error', err);
-            this.reconnect();
-        });
+    // ⭐ Create peer WITHOUT initial stream
+    this.peer1 = new SimplePeer({
+        initiator: true,
+        config: {
+            iceServers: [
+                { urls: "stun:stun.relay.metered.ca:80" },
+                {
+                    urls: "turn:global.relay.metered.ca:80",
+                    username: "63549d560f2efcb312cd67de",
+                    credential: "qh7UD1VgYnwSWhmQ",
+                },
+                {
+                    urls: "turn:global.relay.metered.ca:80?transport=tcp",
+                    username: "63549d560f2efcb312cd67de",
+                    credential: "qh7UD1VgYnwSWhmQ",
+                },
+                {
+                    urls: "turn:global.relay.metered.ca:443",
+                    username: "63549d560f2efcb312cd67de",
+                    credential: "qh7UD1VgYnwSWhmQ",
+                },
+                {
+                    urls: "turns:global.relay.metered.ca:443?transport=tcp",
+                    username: "63549d560f2efcb312cd67de",
+                    credential: "qh7UD1VgYnwSWhmQ",
+                },
+            ],
+        },
+    });
 
-        this.peer1.on('close', () => {
-            this.reconnect();
-        });
+  // ⭐ Add SCREEN tracks FIRST (ensures they're track 0 & 1)
+console.log('[CONNECT] 📤 Adding SCREEN tracks (video + audio)...');
+let trackIndex = 0;
+this.screenStream.getTracks().forEach(track => {
+    console.log(`[CONNECT] 📤 Track ${trackIndex++}:`, track.kind, '(SCREEN)', track.label);
+    this.peer1.addTrack(track, this.screenStream);
+});
 
-        this.peer1.on('connect', async () => {
-            this.connected = true;
-            this.clipboardListener();
-            this.connectHelperService.showInfoWindow();
-            const win = this.electronService.window;
-            try { win.minimize(); } catch {}
+console.log('[CONNECT] ✅ Screen tracks added. Camera will be added when enabled by user.');
+   
 
-            // Show chat windows for both roles on this side (host+user panes)
-            this.createDualChatUI();
+    this.peer1.on('signal', data => {
+        this.socketService.sendMessage(data);
+    });
 
-            setTimeout(async () => {
-                await this.startLocalCamera();
-            }, 1000);
-        });
-
-        this.peer1.on('stream', (remoteStream) => {
-            let remoteVideo = document.getElementById('remoteUserVideo') as HTMLVideoElement;
-            if (!remoteVideo) {
-                remoteVideo = document.createElement('video');
-                remoteVideo.id = 'remoteUserVideo';
-                remoteVideo.autoplay = true;
-                remoteVideo.style.position = 'fixed';
-                remoteVideo.style.bottom = '10px';
-                remoteVideo.style.left = '10px';
-                remoteVideo.style.width = '200px';
-                remoteVideo.style.height = '150px';
-                remoteVideo.style.borderRadius = '12px';
-                remoteVideo.style.border = '2px solid white';
-                remoteVideo.style.zIndex = '9999';
-                remoteVideo.style.objectFit = 'cover';
-                document.body.appendChild(remoteVideo);
-            }
-            remoteVideo.srcObject = remoteStream;
-            remoteVideo.play().catch(e => console.error('[CONNECT] Play error:', e));
-        });
-
-        this.peer1.on('data', async data => {
-            if (data) {
-                try {
-                    const fileTransfer = data.toString();
-
-                    if (fileTransfer.substr(0, 5) === 'file-') {
-                        const fileID = fileTransfer.substr(5);
-                        this.spf
-                            .receive(this.peer1, fileID)
-                            .then((transfer: any) => {
-                                this.fileLoading = true;
-                                transfer.on('progress', p => {});
-                                transfer.on('done', file => {
-                                    this.fileLoading = false;
-                                    const element = document.createElement('a');
-                                    element.href = URL.createObjectURL(file);
-                                    element.download = file.name;
-                                    element.click();
-                                });
-                            });
-                        this.peer1.send(`start-${fileID}`);
-                        return;
-                    }
-
-                    if (fileTransfer.substr(0, 10) === 'clipboard-') {
-                        const text = fileTransfer.substr(10);
-                        this.electronService.clipboard.writeText(text);
-                        return;
-                    }
-
-                    // Chat message handling (new: support chat-host- and chat-user- prefixes)
-                    const text = new TextDecoder('utf-8').decode(data);
-                    if (text.startsWith("chat-host-")) {
-                        const message = text.replace("chat-host-", "");
-                        // show in host pane as remote-host message
-                        this.addChatMessage("Remote (Host)", message, "host");
-                        return;
-                    } else if (text.startsWith("chat-user-")) {
-                        const message = text.replace("chat-user-", "");
-                        // show in user pane as remote-user message
-                        this.addChatMessage("Remote (User)", message, "user");
-                        return;
-                    }
-
-                    // Keyboard / Scroll / Mouse handling
-                    if (text.substring(0, 1) == '{') {
-                        const keyData = JSON.parse(text);
-                        await this.connectHelperService.handleKey(keyData);
-                    } else if (text.substring(0, 1) == 's') {
-                        this.connectHelperService.handleScroll(text);
-                    } else {
-                        this.connectHelperService.handleMouse(text);
-                    }
-
-                } catch (error) {
-                    console.error('[CONNECT] data handler error', error);
-                }
-            }
-        });
+    this.peer1.on('error', (err) => {
+        console.error('[CONNECT] peer error', err);
+        if (err.message && !err.message.includes('user initiated')) {
+        console.log('[CONNECT] 🔄 Error requires reconnection');
+        setTimeout(() => this.reconnect(), 1000);
     }
+    });
 
-async startLocalCamera() {
+    this.peer1.on('close', () => {
+        this.reconnect();
+    });
+
+    this.peer1.on('connect', async () => {
+        console.log('[CONNECT] ✅ Connected!');
+        this.connected = true;
+        this.clipboardListener();
+        this.connectHelperService.showInfoWindow();
+        const win = this.electronService.window;
+        try { win.minimize(); } catch {}
+
+        // Show chat windows
+        this.createDualChatUI();
+    });
+
+    this.peer1.on('stream', (remoteStream) => {
+        let remoteVideo = document.getElementById('remoteUserVideo') as HTMLVideoElement;
+        if (!remoteVideo) {
+            remoteVideo = document.createElement('video');
+            remoteVideo.id = 'remoteUserVideo';
+            remoteVideo.autoplay = true;
+            remoteVideo.style.position = 'fixed';
+            remoteVideo.style.bottom = '10px';
+            remoteVideo.style.left = '10px';
+            remoteVideo.style.width = '200px';
+            remoteVideo.style.height = '150px';
+            remoteVideo.style.borderRadius = '12px';
+            remoteVideo.style.border = '2px solid white';
+            remoteVideo.style.zIndex = '9999';
+            remoteVideo.style.objectFit = 'cover';
+            document.body.appendChild(remoteVideo);
+        }
+        remoteVideo.srcObject = remoteStream;
+        remoteVideo.play().catch(e => console.error('[CONNECT] Play error:', e));
+    });
+
+    this.peer1.on('data', async data => {
+        if (data) {
+            try {
+                const fileTransfer = data.toString();
+
+                if (fileTransfer.substr(0, 5) === 'file-') {
+                    const fileID = fileTransfer.substr(5);
+                    this.spf
+                        .receive(this.peer1, fileID)
+                        .then((transfer: any) => {
+                            this.fileLoading = true;
+                            transfer.on('progress', p => {});
+                            transfer.on('done', file => {
+                                this.fileLoading = false;
+                                const element = document.createElement('a');
+                                element.href = URL.createObjectURL(file);
+                                element.download = file.name;
+                                element.click();
+                            });
+                        });
+                    this.peer1.send(`start-${fileID}`);
+                    return;
+                }
+
+                if (fileTransfer.substr(0, 10) === 'clipboard-') {
+                    const text = fileTransfer.substr(10);
+                    this.electronService.clipboard.writeText(text);
+                    return;
+                }
+
+                const text = new TextDecoder('utf-8').decode(data);
+                if (text.startsWith("chat-host-")) {
+                    const message = text.replace("chat-host-", "");
+                    this.addChatMessage("Remote (Host)", message, "host");
+                    return;
+                } else if (text.startsWith("chat-user-")) {
+                    const message = text.replace("chat-user-", "");
+                    this.addChatMessage("Remote (User)", message, "user");
+                    return;
+                }
+
+                if (text.substring(0, 1) == '{') {
+                    const keyData = JSON.parse(text);
+                    await this.connectHelperService.handleKey(keyData);
+                } else if (text.substring(0, 1) == 's') {
+                    this.connectHelperService.handleScroll(text);
+                } else {
+                    this.connectHelperService.handleMouse(text);
+                }
+
+            } catch (error) {
+                console.error('[CONNECT] data handler error', error);
+            }
+        }
+    });
+}
+
+
+//workuing befire code but not working when i run second time
+
+    // async videoConnector() {
+    //     // close any loader
+    //     try { this.loading?.dismiss(); } catch {}
+
+    //     // SCREEN SHARE stream
+    //     const source = this.videoSource;
+    //     this.screenStream = source.stream;
+
+    //     this.peer1 = new SimplePeer({
+    //         initiator: true,
+    //         stream: this.screenStream,
+    //         config: {
+    //             iceServers: [
+    //                 { urls: "stun:stun.relay.metered.ca:80" },
+    //                 {
+    //                     urls: "turn:global.relay.metered.ca:80",
+    //                     username: "63549d560f2efcb312cd67de",
+    //                     credential: "qh7UD1VgYnwSWhmQ",
+    //                 },
+    //                 {
+    //                     urls: "turn:global.relay.metered.ca:80?transport=tcp",
+    //                     username: "63549d560f2efcb312cd67de",
+    //                     credential: "qh7UD1VgYnwSWhmQ",
+    //                 },
+    //                 {
+    //                     urls: "turn:global.relay.metered.ca:443",
+    //                     username: "63549d560f2efcb312cd67de",
+    //                     credential: "qh7UD1VgYnwSWhmQ",
+    //                 },
+    //                 {
+    //                     urls: "turns:global.relay.metered.ca:443?transport=tcp",
+    //                     username: "63549d560f2efcb312cd67de",
+    //                     credential: "qh7UD1VgYnwSWhmQ",
+    //                 },
+    //             ],
+    //         },
+    //     });
+
+    //     this.peer1.on('signal', data => {
+    //         this.socketService.sendMessage(data);
+    //     });
+
+    //     this.peer1.on('error', (err) => {
+    //         console.error('[CONNECT] peer error', err);
+    //         this.reconnect();
+    //     });
+
+    //     this.peer1.on('close', () => {
+    //         this.reconnect();
+    //     });
+
+    //     this.peer1.on('connect', async () => {
+    //         this.connected = true;
+    //         this.clipboardListener();
+    //         this.connectHelperService.showInfoWindow();
+    //         const win = this.electronService.window;
+    //         try { win.minimize(); } catch {}
+
+    //         // Show chat windows for both roles on this side (host+user panes)
+    //         this.createDualChatUI();
+
+    //         setTimeout(async () => {
+    //             await this.startLocalCamera();
+    //         }, 1000);
+    //     });
+
+    //     this.peer1.on('stream', (remoteStream) => {
+    //         let remoteVideo = document.getElementById('remoteUserVideo') as HTMLVideoElement;
+    //         if (!remoteVideo) {
+    //             remoteVideo = document.createElement('video');
+    //             remoteVideo.id = 'remoteUserVideo';
+    //             remoteVideo.autoplay = true;
+    //             remoteVideo.style.position = 'fixed';
+    //             remoteVideo.style.bottom = '10px';
+    //             remoteVideo.style.left = '10px';
+    //             remoteVideo.style.width = '200px';
+    //             remoteVideo.style.height = '150px';
+    //             remoteVideo.style.borderRadius = '12px';
+    //             remoteVideo.style.border = '2px solid white';
+    //             remoteVideo.style.zIndex = '9999';
+    //             remoteVideo.style.objectFit = 'cover';
+    //             document.body.appendChild(remoteVideo);
+    //         }
+    //         remoteVideo.srcObject = remoteStream;
+    //         remoteVideo.play().catch(e => console.error('[CONNECT] Play error:', e));
+    //     });
+
+    //     this.peer1.on('data', async data => {
+    //         if (data) {
+    //             try {
+    //                 const fileTransfer = data.toString();
+
+    //                 if (fileTransfer.substr(0, 5) === 'file-') {
+    //                     const fileID = fileTransfer.substr(5);
+    //                     this.spf
+    //                         .receive(this.peer1, fileID)
+    //                         .then((transfer: any) => {
+    //                             this.fileLoading = true;
+    //                             transfer.on('progress', p => {});
+    //                             transfer.on('done', file => {
+    //                                 this.fileLoading = false;
+    //                                 const element = document.createElement('a');
+    //                                 element.href = URL.createObjectURL(file);
+    //                                 element.download = file.name;
+    //                                 element.click();
+    //                             });
+    //                         });
+    //                     this.peer1.send(`start-${fileID}`);
+    //                     return;
+    //                 }
+
+    //                 if (fileTransfer.substr(0, 10) === 'clipboard-') {
+    //                     const text = fileTransfer.substr(10);
+    //                     this.electronService.clipboard.writeText(text);
+    //                     return;
+    //                 }
+
+    //                 // Chat message handling (new: support chat-host- and chat-user- prefixes)
+    //                 const text = new TextDecoder('utf-8').decode(data);
+    //                 if (text.startsWith("chat-host-")) {
+    //                     const message = text.replace("chat-host-", "");
+    //                     // show in host pane as remote-host message
+    //                     this.addChatMessage("Remote (Host)", message, "host");
+    //                     return;
+    //                 } else if (text.startsWith("chat-user-")) {
+    //                     const message = text.replace("chat-user-", "");
+    //                     // show in user pane as remote-user message
+    //                     this.addChatMessage("Remote (User)", message, "user");
+    //                     return;
+    //                 }
+
+    //                 // Keyboard / Scroll / Mouse handling
+    //                 if (text.substring(0, 1) == '{') {
+    //                     const keyData = JSON.parse(text);
+    //                     await this.connectHelperService.handleKey(keyData);
+    //                 } else if (text.substring(0, 1) == 's') {
+    //                     this.connectHelperService.handleScroll(text);
+    //                 } else {
+    //                     this.connectHelperService.handleMouse(text);
+    //                 }
+
+    //             } catch (error) {
+    //                 console.error('[CONNECT] data handler error', error);
+    //             }
+    //         }
+    //     });
+    // }
+
+
+  async startLocalCamera() {
     try {
         console.log('[CONNECT] 🎤 Requesting camera + mic...');
         
-        this.cameraStream = await navigator.mediaDevices.getUserMedia({
-            video: true,
-            audio: true
-        });
+       // Only request what's enabled
+const constraints: any = {};
+if (this.hostCameraEnabled) constraints.video = true;
+if (this.hostMicEnabled) constraints.audio = true;
+
+// If nothing is enabled, don't request anything
+if (!this.hostCameraEnabled && !this.hostMicEnabled) {
+    console.log('[CONNECT] ⚠️ Both camera and mic are disabled, skipping getUserMedia');
+    return null;
+}
+
+this.cameraStream = await navigator.mediaDevices.getUserMedia(constraints);
 
         console.log('[CONNECT] ✅ Got stream with tracks:', {
             video: this.cameraStream.getVideoTracks().length,
             audio: this.cameraStream.getAudioTracks().length
         });
 
+        // Add camera tracks to peer if already connected
         if (this.peer1 && this.cameraStream) {
             console.log('[CONNECT] 📤 Adding camera tracks to peer...');
             this.cameraStream.getTracks().forEach((track, index) => {
@@ -840,11 +436,10 @@ async startLocalCamera() {
                     console.error('[CONNECT] ❌ Failed to add track:', e);
                 }
             });
-            console.log('[CONNECT] ✅ All tracks added to peer');
-        } else {
-            console.error('[CONNECT] ❌ Cannot add tracks - peer or stream missing');
+            console.log('[CONNECT] ✅ All camera tracks added to peer');
         }
 
+        // Create local video preview
         let localVideo = document.getElementById('localUserVideo') as HTMLVideoElement;
         if (!localVideo) {
             localVideo = document.createElement('video');
@@ -870,6 +465,185 @@ async startLocalCamera() {
         return null;
     }
 }
+
+async toggleHostCamera() {
+    this.hostCameraEnabled = !this.hostCameraEnabled;
+    console.log('[CONNECT] 📹 Host camera:', this.hostCameraEnabled ? 'ON' : 'OFF');
+    
+    if (this.hostCameraEnabled) {
+        // Start camera for first time OR re-enable track
+        if (!this.cameraStream) {
+            // Need to get stream for first time
+            try {
+                this.cameraStream = await navigator.mediaDevices.getUserMedia({
+                    video: true,
+                    audio: this.hostMicEnabled  // Get mic too if it's enabled
+                });
+                
+                // Add tracks to peer
+                if (this.peer1 && this.cameraStream) {
+                    this.cameraStream.getTracks().forEach((track) => {
+                        console.log('[CONNECT] 📤 Adding track:', track.kind);
+                        this.peer1.addTrack(track, this.cameraStream!);
+                    });
+                }
+                
+                // Show preview
+                this.showLocalVideoPreview();
+            } catch (err) {
+                console.error('[CONNECT] ❌ Failed to get camera:', err);
+                this.hostCameraEnabled = false;
+            }
+        } else {
+            // Just enable existing video track
+            const videoTracks = this.cameraStream.getVideoTracks();
+            videoTracks.forEach(track => track.enabled = true);
+        }
+    } else {
+        // Disable video track
+        if (this.cameraStream) {
+            const videoTracks = this.cameraStream.getVideoTracks();
+            videoTracks.forEach(track => track.enabled = false);
+        }
+    }
+}
+
+async toggleHostMic() {
+    this.hostMicEnabled = !this.hostMicEnabled;
+    console.log('[CONNECT] 🎤 Host mic:', this.hostMicEnabled ? 'ON' : 'OFF');
+    
+    if (this.hostMicEnabled) {
+        // Start mic for first time OR re-enable track
+        if (!this.cameraStream) {
+            // Need to get stream for first time
+            try {
+                this.cameraStream = await navigator.mediaDevices.getUserMedia({
+                    video: this.hostCameraEnabled,  // Get camera too if it's enabled
+                    audio: true
+                });
+                
+                // Add tracks to peer
+                if (this.peer1 && this.cameraStream) {
+                    this.cameraStream.getTracks().forEach((track) => {
+                        console.log('[CONNECT] 📤 Adding track:', track.kind);
+                        this.peer1.addTrack(track, this.cameraStream!);
+                    });
+                }
+                
+                // Show preview
+                this.showLocalVideoPreview();
+            } catch (err) {
+                console.error('[CONNECT] ❌ Failed to get mic:', err);
+                this.hostMicEnabled = false;
+            }
+        } else {
+            // Just enable existing audio track
+            const audioTracks = this.cameraStream.getAudioTracks();
+            audioTracks.forEach(track => track.enabled = true);
+        }
+    } else {
+        // Disable audio track
+        if (this.cameraStream) {
+            const audioTracks = this.cameraStream.getAudioTracks();
+            audioTracks.forEach(track => track.enabled = false);
+        }
+    }
+}
+
+// NEW helper method - add this
+private showLocalVideoPreview() {
+    if (!this.cameraStream) return;
+    
+    let localVideo = document.getElementById('localUserVideo') as HTMLVideoElement;
+    if (!localVideo) {
+        localVideo = document.createElement('video');
+        localVideo.id = 'localUserVideo';
+        localVideo.autoplay = true;
+        localVideo.muted = true;
+        localVideo.style.position = 'fixed';
+        localVideo.style.bottom = '10px';
+        localVideo.style.right = '10px';
+        localVideo.style.width = '150px';
+        localVideo.style.height = '110px';
+        localVideo.style.borderRadius = '12px';
+        localVideo.style.border = '2px solid white';
+        localVideo.style.zIndex = '9999';
+        localVideo.style.objectFit = 'cover';
+        document.body.appendChild(localVideo);
+    }
+    localVideo.srcObject = this.cameraStream;
+    localVideo.play();
+}
+
+stopHostMedia() {
+    console.log('[CONNECT] 🛑 Stopping host camera/mic...');
+    if (this.cameraStream) {
+        this.cameraStream.getTracks().forEach(track => track.stop());
+        this.cameraStream = null;
+    }
+    
+    const localVideo = document.getElementById('localUserVideo');
+    if (localVideo) localVideo.remove();
+    
+    this.hostCameraEnabled = false;
+    this.hostMicEnabled = false;
+}
+
+//old working code
+// async startLocalCamera() {
+//     try {
+//         console.log('[CONNECT] 🎤 Requesting camera + mic...');
+        
+//         this.cameraStream = await navigator.mediaDevices.getUserMedia({
+//             video: true,
+//             audio: true
+//         });
+
+//         console.log('[CONNECT] ✅ Got stream with tracks:', {
+//             video: this.cameraStream.getVideoTracks().length,
+//             audio: this.cameraStream.getAudioTracks().length
+//         });
+
+//         if (this.peer1 && this.cameraStream) {
+//             console.log('[CONNECT] 📤 Adding camera tracks to peer...');
+//             this.cameraStream.getTracks().forEach((track, index) => {
+//                 console.log(`[CONNECT] 📤 Track ${index}:`, track.kind, track.label);
+//                 try { 
+//                     this.peer1.addTrack(track, this.cameraStream!); 
+//                 } catch (e) {
+//                     console.error('[CONNECT] ❌ Failed to add track:', e);
+//                 }
+//             });
+//             console.log('[CONNECT] ✅ All tracks added to peer');
+//         } else {
+//             console.error('[CONNECT] ❌ Cannot add tracks - peer or stream missing');
+//         }
+
+//         let localVideo = document.getElementById('localUserVideo') as HTMLVideoElement;
+//         if (!localVideo) {
+//             localVideo = document.createElement('video');
+//             localVideo.id = 'localUserVideo';
+//             localVideo.autoplay = true;
+//             localVideo.muted = true;
+//             localVideo.style.position = 'fixed';
+//             localVideo.style.bottom = '10px';
+//             localVideo.style.right = '10px';
+//             localVideo.style.width = '150px';
+//             localVideo.style.height = '110px';
+//             localVideo.style.borderRadius = '12px';
+//             localVideo.style.border = '2px solid white';
+//             localVideo.style.zIndex = '9999';
+//             localVideo.style.objectFit = 'cover';
+//             document.body.appendChild(localVideo);
+//         }
+//         localVideo.srcObject = this.cameraStream;
+//         localVideo.play();
+//         return this.cameraStream;
+//     } catch (err) {
+//         console.error('[CONNECT] ❌ getUserMedia FAILED:', err.name, err.message);
+//         return null;
+//     }
+// }
     async askForConnectPermission() {
         return new Promise(async resolve => {
             const alert = await this.alertCtrl.create({
@@ -973,43 +747,125 @@ async startLocalCamera() {
         } catch {}
     }
 
- async reconnect() {
+   async reconnect() {
+    console.log('[CONNECT] 🔄 Starting reconnection...');
     const win = this.electronService.window;
     try { win.restore(); } catch {}
   
     const savedId = this.id;
     
+    // ⭐ CRITICAL: Tell remote we're reconnecting BEFORE destroying anything
+    console.log('[CONNECT] 📡 Notifying remote of reconnection...');
+    if (this.socketService && this.socketService.socket?.connected) {
+        this.socketService.sendMessage('host-reconnecting');
+    }
+    
+    // ⭐ Wait for remote to acknowledge (give it time to clean up)
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    // Now clean up local state
     this.connected = false;
-    this.dialog = false;  
+    this.dialog = false;
+    this.initialized = false;
 
-    if (this.cameraStream) this.cameraStream.getTracks().forEach(track => track.stop());
-    if (this.screenStream) this.screenStream.getTracks().forEach(track => track.stop());
+    // Stop streams
+    if (this.cameraStream) {
+        this.cameraStream.getTracks().forEach(track => track.stop());
+        this.cameraStream = null;
+    }
+    if (this.screenStream) {
+        this.screenStream.getTracks().forEach(track => track.stop());
+        this.screenStream = null;
+    }
 
+    // Remove UI
     const localVideo = document.getElementById('localUserVideo');
     const remoteVideo = document.getElementById('remoteUserVideo');
     if (localVideo) localVideo.remove();
     if (remoteVideo) remoteVideo.remove();
-
-    // Remove chat
     this.removeChatWindow();
 
+    // Destroy connections
     await this.destroy();
   
+    // Restore ID (important for rejoining same room)
     this.id = savedId;
     this.idArray = ('' + this.id).split('');
     
-    setTimeout(() => this.init(), 500);
+    // ⭐ Wait longer before reinitializing
+    console.log('[CONNECT] ⏳ Waiting 1s before reinitializing...');
+    setTimeout(() => {
+        console.log('[CONNECT] 🔄 Reinitializing connection...');
+        this.init();
+    }, 1000); // Increased from 500ms
+    
     this.connectHelperService.closeInfoWindow();
 }
-    async destroy() {
-        this.initialized = false;
-        try { await this.peer1?.destroy(); } catch {}
-        try { await this.socketService?.destroy(); } catch {}
-        try { this.socketSub?.unsubscribe(); } catch {}
-        try { this.sub3?.unsubscribe(); } catch {}
-        try { this.electronService.remote.screen.removeAllListeners(); } catch {}
-    }
 
+
+
+//old code r
+
+//  async reconnect() {
+//     const win = this.electronService.window;
+//     try { win.restore(); } catch {}
+  
+//     const savedId = this.id;
+    
+//     this.connected = false;
+//     this.dialog = false;  
+
+//     if (this.cameraStream) this.cameraStream.getTracks().forEach(track => track.stop());
+//     if (this.screenStream) this.screenStream.getTracks().forEach(track => track.stop());
+
+//     const localVideo = document.getElementById('localUserVideo');
+//     const remoteVideo = document.getElementById('remoteUserVideo');
+//     if (localVideo) localVideo.remove();
+//     if (remoteVideo) remoteVideo.remove();
+
+//     // Remove chat
+//     this.removeChatWindow();
+
+//     await this.destroy();
+  
+//     this.id = savedId;
+//     this.idArray = ('' + this.id).split('');
+    
+//     setTimeout(() => this.init(), 500);
+//     this.connectHelperService.closeInfoWindow();
+// }
+    async destroy() {
+    console.log('[CONNECT] 🧹 Destroying all connections...');
+    this.initialized = false;
+    
+    try {
+        if (this.peer1) {
+            this.peer1.removeAllListeners(); // ← Add this
+            await this.peer1.destroy();
+            this.peer1 = null; // ← Add this
+        }
+    } catch (err) {
+        console.error('[CONNECT] Peer destroy error:', err);
+    }
+    
+    try {
+        await this.socketService?.destroy();
+    } catch {}
+    
+    try {
+        this.socketSub?.unsubscribe();
+        this.sub3?.unsubscribe();
+    } catch {}
+    
+    try {
+        this.electronService.remote.screen.removeAllListeners();
+    } catch {}
+    
+    // ⭐ Ensure streams are nullified
+    this.stopHostMedia();
+    this.cameraStream = null;
+    this.screenStream = null;
+}
     connect(id) {
         if (this.electronService.isElectronApp) {
             const appPath = this.electronService.remote.app.getAppPath();
@@ -1076,14 +932,31 @@ async startLocalCamera() {
                     </div>
                 </div>
                 <div id="hostChatMessages" style="flex:1; padding:8px; overflow-y:auto; font-size:14px; background:transparent;"></div>
-                <div id="hostChatInputWrapper" style="padding:6px; display:flex; gap:4px; border-top:1px solid #111827;">
-                    <input id="hostChatInput" placeholder="Message as Host..." 
-                        style="flex:1; padding:8px; border-radius:6px; border:1px solid #374151; outline:none; background:#0b1220; color:white;"/>
-                    <button id="hostChatSend" 
-                        style="padding:8px 10px; background:#06b6d4; color:black; border:none; border-radius:6px; cursor:pointer;">
-                        Send
-                    </button>
-                </div>
+                <div style="padding:6px; border-top:1px solid #111827;">
+    <!-- Media Controls Row -->
+    <div style="display:flex; gap:4px; margin-bottom:6px; justify-content:center;">
+        <button id="hostCameraToggle" 
+            style="padding:6px 10px; background:#374151; color:white; border:none; border-radius:6px; cursor:pointer; font-size:20px;" 
+            title="Toggle Camera">
+            📹
+        </button>
+        <button id="hostMicToggle" 
+            style="padding:6px 10px; background:#374151; color:white; border:none; border-radius:6px; cursor:pointer; font-size:20px;" 
+            title="Toggle Microphone">
+            🎤
+        </button>
+    </div>
+    
+    <!-- Chat Input Row -->
+    <div id="hostChatInputWrapper" style="display:flex; gap:4px;">
+        <input id="hostChatInput" placeholder="Message as Host..." 
+            style="flex:1; padding:8px; border-radius:6px; border:1px solid #374151; outline:none; background:#0b1220; color:white;"/>
+        <button id="hostChatSend" 
+            style="padding:8px 10px; background:#06b6d4; color:black; border:none; border-radius:6px; cursor:pointer;">
+            Send
+        </button>
+    </div>
+</div>
             `;
 
             document.body.appendChild(hostBox);
@@ -1094,6 +967,34 @@ async startLocalCamera() {
             const hostClose = document.getElementById('hostChatCloseBtn');
             const hostMessages = document.getElementById('hostChatMessages')!;
             const hostInputWrapper = document.getElementById('hostChatInputWrapper')!;
+
+            // Media control buttons
+const hostCameraBtn = document.getElementById('hostCameraToggle');
+const hostMicBtn = document.getElementById('hostMicToggle');
+
+hostCameraBtn?.addEventListener('click', async () => {
+    await this.toggleHostCamera();
+    // Update button style
+    if (this.hostCameraEnabled) {
+        hostCameraBtn.style.background = '#06b6d4'; // cyan = ON
+        hostCameraBtn.style.color = 'black';
+    } else {
+        hostCameraBtn.style.background = '#374151'; // gray = OFF
+        hostCameraBtn.style.color = 'white';
+    }
+});
+
+hostMicBtn?.addEventListener('click', async () => {
+    await this.toggleHostMic();
+    // Update button style
+    if (this.hostMicEnabled) {
+        hostMicBtn.style.background = '#06b6d4'; // cyan = ON
+        hostMicBtn.style.color = 'black';
+    } else {
+        hostMicBtn.style.background = '#374151'; // gray = OFF
+        hostMicBtn.style.color = 'white';
+    }
+});
 
             const doHostSend = () => {
                 if (!hostInput.value.trim()) return;
