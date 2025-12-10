@@ -669,154 +669,329 @@ export class ConnectService {
     }
 
     async videoConnector() {
-        // close any loader
-        try { this.loading?.dismiss(); } catch {}
+    try { this.loading?.dismiss(); } catch {}
 
-        // SCREEN SHARE stream
-        const source = this.videoSource;
-        this.screenStream = source.stream;
-
-        this.peer1 = new SimplePeer({
-            initiator: true,
-            stream: this.screenStream,
-            config: {
-                iceServers: [
-                    { urls: "stun:stun.relay.metered.ca:80" },
-                    {
-                        urls: "turn:global.relay.metered.ca:80",
-                        username: "63549d560f2efcb312cd67de",
-                        credential: "qh7UD1VgYnwSWhmQ",
-                    },
-                    {
-                        urls: "turn:global.relay.metered.ca:80?transport=tcp",
-                        username: "63549d560f2efcb312cd67de",
-                        credential: "qh7UD1VgYnwSWhmQ",
-                    },
-                    {
-                        urls: "turn:global.relay.metered.ca:443",
-                        username: "63549d560f2efcb312cd67de",
-                        credential: "qh7UD1VgYnwSWhmQ",
-                    },
-                    {
-                        urls: "turns:global.relay.metered.ca:443?transport=tcp",
-                        username: "63549d560f2efcb312cd67de",
-                        credential: "qh7UD1VgYnwSWhmQ",
-                    },
-                ],
-            },
-        });
-
-        this.peer1.on('signal', data => {
-            this.socketService.sendMessage(data);
-        });
-
-        this.peer1.on('error', (err) => {
-            console.error('[CONNECT] peer error', err);
-            this.reconnect();
-        });
-
-        this.peer1.on('close', () => {
-            this.reconnect();
-        });
-
-        this.peer1.on('connect', async () => {
-            this.connected = true;
-            this.clipboardListener();
-            this.connectHelperService.showInfoWindow();
-            const win = this.electronService.window;
-            try { win.minimize(); } catch {}
-
-            // Show chat windows for both roles on this side (host+user panes)
-            this.createDualChatUI();
-
-            setTimeout(async () => {
-                await this.startLocalCamera();
-            }, 1000);
-        });
-
-        this.peer1.on('stream', (remoteStream) => {
-            let remoteVideo = document.getElementById('remoteUserVideo') as HTMLVideoElement;
-            if (!remoteVideo) {
-                remoteVideo = document.createElement('video');
-                remoteVideo.id = 'remoteUserVideo';
-                remoteVideo.autoplay = true;
-                remoteVideo.style.position = 'fixed';
-                remoteVideo.style.bottom = '10px';
-                remoteVideo.style.left = '10px';
-                remoteVideo.style.width = '200px';
-                remoteVideo.style.height = '150px';
-                remoteVideo.style.borderRadius = '12px';
-                remoteVideo.style.border = '2px solid white';
-                remoteVideo.style.zIndex = '9999';
-                remoteVideo.style.objectFit = 'cover';
-                document.body.appendChild(remoteVideo);
-            }
-            remoteVideo.srcObject = remoteStream;
-            remoteVideo.play().catch(e => console.error('[CONNECT] Play error:', e));
-        });
-
-        this.peer1.on('data', async data => {
-            if (data) {
-                try {
-                    const fileTransfer = data.toString();
-
-                    if (fileTransfer.substr(0, 5) === 'file-') {
-                        const fileID = fileTransfer.substr(5);
-                        this.spf
-                            .receive(this.peer1, fileID)
-                            .then((transfer: any) => {
-                                this.fileLoading = true;
-                                transfer.on('progress', p => {});
-                                transfer.on('done', file => {
-                                    this.fileLoading = false;
-                                    const element = document.createElement('a');
-                                    element.href = URL.createObjectURL(file);
-                                    element.download = file.name;
-                                    element.click();
-                                });
-                            });
-                        this.peer1.send(`start-${fileID}`);
-                        return;
-                    }
-
-                    if (fileTransfer.substr(0, 10) === 'clipboard-') {
-                        const text = fileTransfer.substr(10);
-                        this.electronService.clipboard.writeText(text);
-                        return;
-                    }
-
-                    // Chat message handling (new: support chat-host- and chat-user- prefixes)
-                    const text = new TextDecoder('utf-8').decode(data);
-                    if (text.startsWith("chat-host-")) {
-                        const message = text.replace("chat-host-", "");
-                        // show in host pane as remote-host message
-                        this.addChatMessage("Remote (Host)", message, "host");
-                        return;
-                    } else if (text.startsWith("chat-user-")) {
-                        const message = text.replace("chat-user-", "");
-                        // show in user pane as remote-user message
-                        this.addChatMessage("Remote (User)", message, "user");
-                        return;
-                    }
-
-                    // Keyboard / Scroll / Mouse handling
-                    if (text.substring(0, 1) == '{') {
-                        const keyData = JSON.parse(text);
-                        await this.connectHelperService.handleKey(keyData);
-                    } else if (text.substring(0, 1) == 's') {
-                        this.connectHelperService.handleScroll(text);
-                    } else {
-                        this.connectHelperService.handleMouse(text);
-                    }
-
-                } catch (error) {
-                    console.error('[CONNECT] data handler error', error);
-                }
-            }
-        });
+    // ⭐ CRITICAL FIX: Get ALL streams BEFORE creating peer
+    console.log('[CONNECT] 🎥 Getting camera + mic FIRST...');
+    await this.startLocalCamera(); // Get camera/mic BEFORE creating peer
+    
+    if (!this.cameraStream) {
+        console.error('[CONNECT] ❌ Failed to get camera stream, aborting');
+        return;
     }
 
-async startLocalCamera() {
+    // Get screen stream
+    const source = this.videoSource;
+    this.screenStream = source.stream;
+    
+    console.log('[CONNECT] 🖥️ Creating peer with ALL tracks at once...');
+
+    // ⭐ Create peer WITHOUT initial stream
+    this.peer1 = new SimplePeer({
+        initiator: true,
+        config: {
+            iceServers: [
+                { urls: "stun:stun.relay.metered.ca:80" },
+                {
+                    urls: "turn:global.relay.metered.ca:80",
+                    username: "63549d560f2efcb312cd67de",
+                    credential: "qh7UD1VgYnwSWhmQ",
+                },
+                {
+                    urls: "turn:global.relay.metered.ca:80?transport=tcp",
+                    username: "63549d560f2efcb312cd67de",
+                    credential: "qh7UD1VgYnwSWhmQ",
+                },
+                {
+                    urls: "turn:global.relay.metered.ca:443",
+                    username: "63549d560f2efcb312cd67de",
+                    credential: "qh7UD1VgYnwSWhmQ",
+                },
+                {
+                    urls: "turns:global.relay.metered.ca:443?transport=tcp",
+                    username: "63549d560f2efcb312cd67de",
+                    credential: "qh7UD1VgYnwSWhmQ",
+                },
+            ],
+        },
+    });
+
+    // ⭐ Add SCREEN tracks FIRST (ensures they're track 0 & 1)
+    console.log('[CONNECT] 📤 Adding SCREEN tracks (video + audio)...');
+    let trackIndex = 0;
+    this.screenStream.getTracks().forEach(track => {
+        console.log(`[CONNECT] 📤 Track ${trackIndex++}:`, track.kind, '(SCREEN)', track.label);
+        this.peer1.addTrack(track, this.screenStream);
+    });
+
+    // ⭐ Add CAMERA tracks SECOND (ensures they're track 2 & 3)
+    console.log('[CONNECT] 📤 Adding CAMERA tracks (video + audio)...');
+    this.cameraStream.getTracks().forEach(track => {
+        console.log(`[CONNECT] 📤 Track ${trackIndex++}:`, track.kind, '(CAMERA)', track.label);
+        this.peer1.addTrack(track, this.cameraStream);
+    });
+
+    console.log('[CONNECT] ✅ All tracks added to peer BEFORE signaling');
+
+    this.peer1.on('signal', data => {
+        this.socketService.sendMessage(data);
+    });
+
+    this.peer1.on('error', (err) => {
+        console.error('[CONNECT] peer error', err);
+        if (err.message && !err.message.includes('user initiated')) {
+        console.log('[CONNECT] 🔄 Error requires reconnection');
+        setTimeout(() => this.reconnect(), 1000);
+    }
+    });
+
+    this.peer1.on('close', () => {
+        this.reconnect();
+    });
+
+    this.peer1.on('connect', async () => {
+        console.log('[CONNECT] ✅ Connected!');
+        this.connected = true;
+        this.clipboardListener();
+        this.connectHelperService.showInfoWindow();
+        const win = this.electronService.window;
+        try { win.minimize(); } catch {}
+
+        // Show chat windows
+        this.createDualChatUI();
+    });
+
+    this.peer1.on('stream', (remoteStream) => {
+        let remoteVideo = document.getElementById('remoteUserVideo') as HTMLVideoElement;
+        if (!remoteVideo) {
+            remoteVideo = document.createElement('video');
+            remoteVideo.id = 'remoteUserVideo';
+            remoteVideo.autoplay = true;
+            remoteVideo.style.position = 'fixed';
+            remoteVideo.style.bottom = '10px';
+            remoteVideo.style.left = '10px';
+            remoteVideo.style.width = '200px';
+            remoteVideo.style.height = '150px';
+            remoteVideo.style.borderRadius = '12px';
+            remoteVideo.style.border = '2px solid white';
+            remoteVideo.style.zIndex = '9999';
+            remoteVideo.style.objectFit = 'cover';
+            document.body.appendChild(remoteVideo);
+        }
+        remoteVideo.srcObject = remoteStream;
+        remoteVideo.play().catch(e => console.error('[CONNECT] Play error:', e));
+    });
+
+    this.peer1.on('data', async data => {
+        if (data) {
+            try {
+                const fileTransfer = data.toString();
+
+                if (fileTransfer.substr(0, 5) === 'file-') {
+                    const fileID = fileTransfer.substr(5);
+                    this.spf
+                        .receive(this.peer1, fileID)
+                        .then((transfer: any) => {
+                            this.fileLoading = true;
+                            transfer.on('progress', p => {});
+                            transfer.on('done', file => {
+                                this.fileLoading = false;
+                                const element = document.createElement('a');
+                                element.href = URL.createObjectURL(file);
+                                element.download = file.name;
+                                element.click();
+                            });
+                        });
+                    this.peer1.send(`start-${fileID}`);
+                    return;
+                }
+
+                if (fileTransfer.substr(0, 10) === 'clipboard-') {
+                    const text = fileTransfer.substr(10);
+                    this.electronService.clipboard.writeText(text);
+                    return;
+                }
+
+                const text = new TextDecoder('utf-8').decode(data);
+                if (text.startsWith("chat-host-")) {
+                    const message = text.replace("chat-host-", "");
+                    this.addChatMessage("Remote (Host)", message, "host");
+                    return;
+                } else if (text.startsWith("chat-user-")) {
+                    const message = text.replace("chat-user-", "");
+                    this.addChatMessage("Remote (User)", message, "user");
+                    return;
+                }
+
+                if (text.substring(0, 1) == '{') {
+                    const keyData = JSON.parse(text);
+                    await this.connectHelperService.handleKey(keyData);
+                } else if (text.substring(0, 1) == 's') {
+                    this.connectHelperService.handleScroll(text);
+                } else {
+                    this.connectHelperService.handleMouse(text);
+                }
+
+            } catch (error) {
+                console.error('[CONNECT] data handler error', error);
+            }
+        }
+    });
+}
+
+
+//workuing befire code but not working when i run second time
+
+    // async videoConnector() {
+    //     // close any loader
+    //     try { this.loading?.dismiss(); } catch {}
+
+    //     // SCREEN SHARE stream
+    //     const source = this.videoSource;
+    //     this.screenStream = source.stream;
+
+    //     this.peer1 = new SimplePeer({
+    //         initiator: true,
+    //         stream: this.screenStream,
+    //         config: {
+    //             iceServers: [
+    //                 { urls: "stun:stun.relay.metered.ca:80" },
+    //                 {
+    //                     urls: "turn:global.relay.metered.ca:80",
+    //                     username: "63549d560f2efcb312cd67de",
+    //                     credential: "qh7UD1VgYnwSWhmQ",
+    //                 },
+    //                 {
+    //                     urls: "turn:global.relay.metered.ca:80?transport=tcp",
+    //                     username: "63549d560f2efcb312cd67de",
+    //                     credential: "qh7UD1VgYnwSWhmQ",
+    //                 },
+    //                 {
+    //                     urls: "turn:global.relay.metered.ca:443",
+    //                     username: "63549d560f2efcb312cd67de",
+    //                     credential: "qh7UD1VgYnwSWhmQ",
+    //                 },
+    //                 {
+    //                     urls: "turns:global.relay.metered.ca:443?transport=tcp",
+    //                     username: "63549d560f2efcb312cd67de",
+    //                     credential: "qh7UD1VgYnwSWhmQ",
+    //                 },
+    //             ],
+    //         },
+    //     });
+
+    //     this.peer1.on('signal', data => {
+    //         this.socketService.sendMessage(data);
+    //     });
+
+    //     this.peer1.on('error', (err) => {
+    //         console.error('[CONNECT] peer error', err);
+    //         this.reconnect();
+    //     });
+
+    //     this.peer1.on('close', () => {
+    //         this.reconnect();
+    //     });
+
+    //     this.peer1.on('connect', async () => {
+    //         this.connected = true;
+    //         this.clipboardListener();
+    //         this.connectHelperService.showInfoWindow();
+    //         const win = this.electronService.window;
+    //         try { win.minimize(); } catch {}
+
+    //         // Show chat windows for both roles on this side (host+user panes)
+    //         this.createDualChatUI();
+
+    //         setTimeout(async () => {
+    //             await this.startLocalCamera();
+    //         }, 1000);
+    //     });
+
+    //     this.peer1.on('stream', (remoteStream) => {
+    //         let remoteVideo = document.getElementById('remoteUserVideo') as HTMLVideoElement;
+    //         if (!remoteVideo) {
+    //             remoteVideo = document.createElement('video');
+    //             remoteVideo.id = 'remoteUserVideo';
+    //             remoteVideo.autoplay = true;
+    //             remoteVideo.style.position = 'fixed';
+    //             remoteVideo.style.bottom = '10px';
+    //             remoteVideo.style.left = '10px';
+    //             remoteVideo.style.width = '200px';
+    //             remoteVideo.style.height = '150px';
+    //             remoteVideo.style.borderRadius = '12px';
+    //             remoteVideo.style.border = '2px solid white';
+    //             remoteVideo.style.zIndex = '9999';
+    //             remoteVideo.style.objectFit = 'cover';
+    //             document.body.appendChild(remoteVideo);
+    //         }
+    //         remoteVideo.srcObject = remoteStream;
+    //         remoteVideo.play().catch(e => console.error('[CONNECT] Play error:', e));
+    //     });
+
+    //     this.peer1.on('data', async data => {
+    //         if (data) {
+    //             try {
+    //                 const fileTransfer = data.toString();
+
+    //                 if (fileTransfer.substr(0, 5) === 'file-') {
+    //                     const fileID = fileTransfer.substr(5);
+    //                     this.spf
+    //                         .receive(this.peer1, fileID)
+    //                         .then((transfer: any) => {
+    //                             this.fileLoading = true;
+    //                             transfer.on('progress', p => {});
+    //                             transfer.on('done', file => {
+    //                                 this.fileLoading = false;
+    //                                 const element = document.createElement('a');
+    //                                 element.href = URL.createObjectURL(file);
+    //                                 element.download = file.name;
+    //                                 element.click();
+    //                             });
+    //                         });
+    //                     this.peer1.send(`start-${fileID}`);
+    //                     return;
+    //                 }
+
+    //                 if (fileTransfer.substr(0, 10) === 'clipboard-') {
+    //                     const text = fileTransfer.substr(10);
+    //                     this.electronService.clipboard.writeText(text);
+    //                     return;
+    //                 }
+
+    //                 // Chat message handling (new: support chat-host- and chat-user- prefixes)
+    //                 const text = new TextDecoder('utf-8').decode(data);
+    //                 if (text.startsWith("chat-host-")) {
+    //                     const message = text.replace("chat-host-", "");
+    //                     // show in host pane as remote-host message
+    //                     this.addChatMessage("Remote (Host)", message, "host");
+    //                     return;
+    //                 } else if (text.startsWith("chat-user-")) {
+    //                     const message = text.replace("chat-user-", "");
+    //                     // show in user pane as remote-user message
+    //                     this.addChatMessage("Remote (User)", message, "user");
+    //                     return;
+    //                 }
+
+    //                 // Keyboard / Scroll / Mouse handling
+    //                 if (text.substring(0, 1) == '{') {
+    //                     const keyData = JSON.parse(text);
+    //                     await this.connectHelperService.handleKey(keyData);
+    //                 } else if (text.substring(0, 1) == 's') {
+    //                     this.connectHelperService.handleScroll(text);
+    //                 } else {
+    //                     this.connectHelperService.handleMouse(text);
+    //                 }
+
+    //             } catch (error) {
+    //                 console.error('[CONNECT] data handler error', error);
+    //             }
+    //         }
+    //     });
+    // }
+
+
+    async startLocalCamera() {
     try {
         console.log('[CONNECT] 🎤 Requesting camera + mic...');
         
@@ -830,21 +1005,12 @@ async startLocalCamera() {
             audio: this.cameraStream.getAudioTracks().length
         });
 
-        if (this.peer1 && this.cameraStream) {
-            console.log('[CONNECT] 📤 Adding camera tracks to peer...');
-            this.cameraStream.getTracks().forEach((track, index) => {
-                console.log(`[CONNECT] 📤 Track ${index}:`, track.kind, track.label);
-                try { 
-                    this.peer1.addTrack(track, this.cameraStream!); 
-                } catch (e) {
-                    console.error('[CONNECT] ❌ Failed to add track:', e);
-                }
-            });
-            console.log('[CONNECT] ✅ All tracks added to peer');
-        } else {
-            console.error('[CONNECT] ❌ Cannot add tracks - peer or stream missing');
-        }
+        // Log track details
+        this.cameraStream.getTracks().forEach((track, i) => {
+            console.log(`[CONNECT] Camera track ${i}:`, track.kind, track.label);
+        });
 
+        // Create local video preview
         let localVideo = document.getElementById('localUserVideo') as HTMLVideoElement;
         if (!localVideo) {
             localVideo = document.createElement('video');
@@ -870,6 +1036,62 @@ async startLocalCamera() {
         return null;
     }
 }
+
+//old working code
+// async startLocalCamera() {
+//     try {
+//         console.log('[CONNECT] 🎤 Requesting camera + mic...');
+        
+//         this.cameraStream = await navigator.mediaDevices.getUserMedia({
+//             video: true,
+//             audio: true
+//         });
+
+//         console.log('[CONNECT] ✅ Got stream with tracks:', {
+//             video: this.cameraStream.getVideoTracks().length,
+//             audio: this.cameraStream.getAudioTracks().length
+//         });
+
+//         if (this.peer1 && this.cameraStream) {
+//             console.log('[CONNECT] 📤 Adding camera tracks to peer...');
+//             this.cameraStream.getTracks().forEach((track, index) => {
+//                 console.log(`[CONNECT] 📤 Track ${index}:`, track.kind, track.label);
+//                 try { 
+//                     this.peer1.addTrack(track, this.cameraStream!); 
+//                 } catch (e) {
+//                     console.error('[CONNECT] ❌ Failed to add track:', e);
+//                 }
+//             });
+//             console.log('[CONNECT] ✅ All tracks added to peer');
+//         } else {
+//             console.error('[CONNECT] ❌ Cannot add tracks - peer or stream missing');
+//         }
+
+//         let localVideo = document.getElementById('localUserVideo') as HTMLVideoElement;
+//         if (!localVideo) {
+//             localVideo = document.createElement('video');
+//             localVideo.id = 'localUserVideo';
+//             localVideo.autoplay = true;
+//             localVideo.muted = true;
+//             localVideo.style.position = 'fixed';
+//             localVideo.style.bottom = '10px';
+//             localVideo.style.right = '10px';
+//             localVideo.style.width = '150px';
+//             localVideo.style.height = '110px';
+//             localVideo.style.borderRadius = '12px';
+//             localVideo.style.border = '2px solid white';
+//             localVideo.style.zIndex = '9999';
+//             localVideo.style.objectFit = 'cover';
+//             document.body.appendChild(localVideo);
+//         }
+//         localVideo.srcObject = this.cameraStream;
+//         localVideo.play();
+//         return this.cameraStream;
+//     } catch (err) {
+//         console.error('[CONNECT] ❌ getUserMedia FAILED:', err.name, err.message);
+//         return null;
+//     }
+// }
     async askForConnectPermission() {
         return new Promise(async resolve => {
             const alert = await this.alertCtrl.create({
@@ -973,43 +1195,124 @@ async startLocalCamera() {
         } catch {}
     }
 
- async reconnect() {
+   async reconnect() {
+    console.log('[CONNECT] 🔄 Starting reconnection...');
     const win = this.electronService.window;
     try { win.restore(); } catch {}
   
     const savedId = this.id;
     
+    // ⭐ CRITICAL: Tell remote we're reconnecting BEFORE destroying anything
+    console.log('[CONNECT] 📡 Notifying remote of reconnection...');
+    if (this.socketService && this.socketService.socket?.connected) {
+        this.socketService.sendMessage('host-reconnecting');
+    }
+    
+    // ⭐ Wait for remote to acknowledge (give it time to clean up)
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    // Now clean up local state
     this.connected = false;
-    this.dialog = false;  
+    this.dialog = false;
+    this.initialized = false;
 
-    if (this.cameraStream) this.cameraStream.getTracks().forEach(track => track.stop());
-    if (this.screenStream) this.screenStream.getTracks().forEach(track => track.stop());
+    // Stop streams
+    if (this.cameraStream) {
+        this.cameraStream.getTracks().forEach(track => track.stop());
+        this.cameraStream = null;
+    }
+    if (this.screenStream) {
+        this.screenStream.getTracks().forEach(track => track.stop());
+        this.screenStream = null;
+    }
 
+    // Remove UI
     const localVideo = document.getElementById('localUserVideo');
     const remoteVideo = document.getElementById('remoteUserVideo');
     if (localVideo) localVideo.remove();
     if (remoteVideo) remoteVideo.remove();
-
-    // Remove chat
     this.removeChatWindow();
 
+    // Destroy connections
     await this.destroy();
   
+    // Restore ID (important for rejoining same room)
     this.id = savedId;
     this.idArray = ('' + this.id).split('');
     
-    setTimeout(() => this.init(), 500);
+    // ⭐ Wait longer before reinitializing
+    console.log('[CONNECT] ⏳ Waiting 1s before reinitializing...');
+    setTimeout(() => {
+        console.log('[CONNECT] 🔄 Reinitializing connection...');
+        this.init();
+    }, 1000); // Increased from 500ms
+    
     this.connectHelperService.closeInfoWindow();
 }
-    async destroy() {
-        this.initialized = false;
-        try { await this.peer1?.destroy(); } catch {}
-        try { await this.socketService?.destroy(); } catch {}
-        try { this.socketSub?.unsubscribe(); } catch {}
-        try { this.sub3?.unsubscribe(); } catch {}
-        try { this.electronService.remote.screen.removeAllListeners(); } catch {}
-    }
 
+
+
+//old code r
+
+//  async reconnect() {
+//     const win = this.electronService.window;
+//     try { win.restore(); } catch {}
+  
+//     const savedId = this.id;
+    
+//     this.connected = false;
+//     this.dialog = false;  
+
+//     if (this.cameraStream) this.cameraStream.getTracks().forEach(track => track.stop());
+//     if (this.screenStream) this.screenStream.getTracks().forEach(track => track.stop());
+
+//     const localVideo = document.getElementById('localUserVideo');
+//     const remoteVideo = document.getElementById('remoteUserVideo');
+//     if (localVideo) localVideo.remove();
+//     if (remoteVideo) remoteVideo.remove();
+
+//     // Remove chat
+//     this.removeChatWindow();
+
+//     await this.destroy();
+  
+//     this.id = savedId;
+//     this.idArray = ('' + this.id).split('');
+    
+//     setTimeout(() => this.init(), 500);
+//     this.connectHelperService.closeInfoWindow();
+// }
+    async destroy() {
+    console.log('[CONNECT] 🧹 Destroying all connections...');
+    this.initialized = false;
+    
+    try {
+        if (this.peer1) {
+            this.peer1.removeAllListeners(); // ← Add this
+            await this.peer1.destroy();
+            this.peer1 = null; // ← Add this
+        }
+    } catch (err) {
+        console.error('[CONNECT] Peer destroy error:', err);
+    }
+    
+    try {
+        await this.socketService?.destroy();
+    } catch {}
+    
+    try {
+        this.socketSub?.unsubscribe();
+        this.sub3?.unsubscribe();
+    } catch {}
+    
+    try {
+        this.electronService.remote.screen.removeAllListeners();
+    } catch {}
+    
+    // ⭐ Ensure streams are nullified
+    this.cameraStream = null;
+    this.screenStream = null;
+}
     connect(id) {
         if (this.electronService.isElectronApp) {
             const appPath = this.electronService.remote.app.getAppPath();

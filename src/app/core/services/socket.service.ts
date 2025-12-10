@@ -67,21 +67,26 @@ export class SocketService {
     });
   }
 
-  destroy() {
+destroy() {
     console.log('[SOCKET] Destroying socket connection');
     try {
-      if (this.socket) {
-        // ✅ FIX 2: Remove all listeners before disconnecting
-        this.socket.removeAllListeners();
-        this.socket.disconnect();
-        this.socket = null;  // ✅ FIX 3: Clear the socket reference
-      }
-      this.currentRoom = null;
-      this.messageQueue = [];
+        if (this.socket) {
+            // Leave room before disconnecting
+            if (this.currentRoom && this.socket.connected) {
+                this.socket.emit('leave', this.currentRoom);
+            }
+            
+            this.socket.removeAllListeners();
+            this.socket.disconnect();
+            this.socket = null;
+        }
+        this.currentRoom = null;
+        this.messageQueue = [];
     } catch (err) {
-      console.error('[SOCKET] Error destroying:', err);
+        console.error('[SOCKET] Error destroying:', err);
     }
-  }
+}
+
 
   joinRoom(id: string) {
     console.log('[SOCKET] 📥 Joining room:', id);
