@@ -119,8 +119,8 @@ export class RemotePage implements OnInit, OnDestroy {
     cursor = true;
     transfer;
     files: any = {};
-    isMuted = false;
-    videoOn = true;
+    isMuted = true;
+    videoOn = false;
 
     fileProgress = 0;
     localStream: MediaStream | null = null;
