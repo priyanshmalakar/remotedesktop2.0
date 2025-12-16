@@ -8,6 +8,7 @@ import {
     OnInit,
     ViewChild,
 } from '@angular/core';
+import { Router } from '@angular/router';
 import { ActivatedRoute } from '@angular/router';
 import { AlertController, ModalController } from '@ionic/angular';
 import {
@@ -119,8 +120,8 @@ export class RemotePage implements OnInit, OnDestroy {
     cursor = true;
     transfer;
     files: any = {};
-   isMuted = true;      // Start with mic MUTED
-videoOn = false;     // Start with camera OFF
+    isMuted = true; // Start with mic MUTED
+    videoOn = false; // Start with camera OFF
 
     fileProgress = 0;
     localStream: MediaStream | null = null;
@@ -320,27 +321,23 @@ videoOn = false;     // Start with camera OFF
     }
 
     toggleAudio() {
-    if (!this.localStream) return;
-    this.isMuted = !this.isMuted;
-    const newState = !this.isMuted; // if not muted, enable
-    this.localStream
-        .getAudioTracks()
-        .forEach(track => {
+        if (!this.localStream) return;
+        this.isMuted = !this.isMuted;
+        const newState = !this.isMuted; // if not muted, enable
+        this.localStream.getAudioTracks().forEach(track => {
             track.enabled = newState;
             console.log('[REMOTE] 🎤 Mic:', newState ? 'ON' : 'OFF');
         });
-}
+    }
 
     toggleVideo() {
-    if (!this.localStream) return;
-    this.videoOn = !this.videoOn;
-    this.localStream
-        .getVideoTracks()
-        .forEach(track => {
+        if (!this.localStream) return;
+        this.videoOn = !this.videoOn;
+        this.localStream.getVideoTracks().forEach(track => {
             track.enabled = this.videoOn;
             console.log('[REMOTE] 📹 Camera:', this.videoOn ? 'ON' : 'OFF');
         });
-}
+    }
 
     endCall() {
         this.stopVideoCall();
@@ -359,7 +356,8 @@ videoOn = false;     // Start with camera OFF
         private modalCtrl: ModalController,
         private cdr: ChangeDetectorRef,
         private alertCtrl: AlertController,
-        private addressBookService: AddressBookService
+        private addressBookService: AddressBookService,
+        private router: Router
     ) {}
 
     fileChangeEvent(event) {
@@ -420,18 +418,24 @@ videoOn = false;     // Start with camera OFF
         }
     }
 
-async startVideoCall() {
-    try {
-        console.log('[REMOTE] 🎥 Starting local video (initially disabled)...');
-        this.localStream = await navigator.mediaDevices.getUserMedia({
-            video: true,
-            audio: true,
-        });
+    async startVideoCall() {
+        try {
+            console.log(
+                '[REMOTE] 🎥 Starting local video (initially disabled)...'
+            );
+            this.localStream = await navigator.mediaDevices.getUserMedia({
+                video: true,
+                audio: true,
+            });
 
-        // Disable tracks by default
-        this.localStream.getVideoTracks().forEach(track => track.enabled = false);
-        this.localStream.getAudioTracks().forEach(track => track.enabled = false);
-        console.log('[REMOTE] 🔒 Camera and mic disabled by default');
+            // Disable tracks by default
+            this.localStream
+                .getVideoTracks()
+                .forEach(track => (track.enabled = false));
+            this.localStream
+                .getAudioTracks()
+                .forEach(track => (track.enabled = false));
+            console.log('[REMOTE] 🔒 Camera and mic disabled by default');
 
             const localVideo = this.localVideoRef?.nativeElement;
             if (localVideo) {
@@ -491,30 +495,30 @@ async startVideoCall() {
                 '[REMOTE] 📨 Message received:',
                 typeof data === 'string' ? data.substring(0, 30) : 'signal'
             );
-            if (
-                typeof data == 'string' &&
-                data?.startsWith('host-reconnecting')
-            ) {
-                console.log('[REMOTE] 🔄 Host is reconnecting, cleaning up...');
+            // if (
+            //     typeof data == 'string' &&
+            //     data?.startsWith('host-reconnecting')
+            // ) {
+            //     console.log('[REMOTE] 🔄 Host is reconnecting, cleaning up...');
 
-                // Clean up old peer
-                if (this.peer2) {
-                    this.peer2.removeAllListeners(); // ← Important!
-                    this.peer2.destroy();
-                    this.peer2 = null;
-                }
+            //     // Clean up old peer
+            //     if (this.peer2) {
+            //         this.peer2.removeAllListeners(); // ← Important!
+            //         this.peer2.destroy();
+            //         this.peer2 = null;
+            //     }
 
-                // Stop and restart local video
-                this.stopVideoCall();
-                await this.startVideoCall();
+            //     // Stop and restart local video
+            //     this.stopVideoCall();
+            //     await this.startVideoCall();
 
-                // Reset connection state
-                this.connected = false;
+            //     // Reset connection state
+            //     this.connected = false;
 
-                // Wait for new connection from host
-                console.log('[REMOTE] ⏳ Ready for new connection');
-                return;
-            }
+            //     // Wait for new connection from host
+            //     console.log('[REMOTE] ⏳ Ready for new connection');
+            //     return;
+            // }
 
             if (typeof data == 'string' && data?.startsWith('screenSize')) {
                 const size = data.split(',');
@@ -988,14 +992,66 @@ async startVideoCall() {
             console.log('[REMOTE] ⏳ Waiting for host camera track...');
         }
     }
-    close() {
+    async close() {
+        console.log('[REMOTE] 🔄 Connection ended, returning to home...');
+
         this.connected = false;
         this.removeEventListeners();
         this.stopVideoCall();
+
+        // Clean up peer
         try {
-            this.electronService.window.close();
+            if (this.peer2) {
+                this.peer2.removeAllListeners();
+                this.peer2.destroy();
+                this.peer2 = null;
+            }
         } catch (err) {
-            console.warn('window.close failed', err);
+            console.error('[REMOTE] Peer cleanup error:', err);
+        }
+
+        // Clean up socket
+        try {
+            this.socketService?.destroy();
+        } catch (err) {
+            console.error('[REMOTE] Socket cleanup error:', err);
+        }
+
+        // Show alert
+        const alert = await this.alertCtrl.create({
+            header: 'Connection Ended',
+            message:
+                'Connection to the host has ended. Returning to home screen.',
+            buttons: [
+                {
+                    text: 'OK',
+                    handler: () => {
+                        // Navigate back to home
+                        this.navigateToHome();
+                    },
+                },
+            ],
+        });
+
+        await alert.present();
+    }
+
+    // ⭐ NEW METHOD - Add this right after close()
+    private navigateToHome() {
+        console.log('[REMOTE] 📍 Navigating to /home...');
+
+        try {
+            // If in Electron, close the remote window
+            if (this.electronService.isElectron) {
+                this.electronService.window.close();
+            } else {
+                // If in browser, navigate to home
+                this.router.navigate(['/home']);
+            }
+        } catch (err) {
+            console.error('[REMOTE] Navigation error:', err);
+            // Fallback: try navigation
+            this.router.navigate(['/home']);
         }
     }
 

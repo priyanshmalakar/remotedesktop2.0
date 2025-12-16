@@ -29,12 +29,10 @@ export class SocketService {
     
     console.log('[SOCKET] Connecting to:', AppConfig.api);
     
-    this.socket = io(AppConfig.api, {
-      reconnection: true,
-      reconnectionDelay: 1000,
-      reconnectionAttempts: 5,
-      transports: ['websocket', 'polling']
-    });
+  this.socket = io(AppConfig.api, {
+    reconnection: false,  
+    transports: ['websocket', 'polling']
+});
 
     this.socket.on('connect', () => {
       console.log('[SOCKET] ✅ Connected! Socket ID:', this.socket.id);

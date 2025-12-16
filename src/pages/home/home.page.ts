@@ -125,7 +125,15 @@ export class HomePage implements OnInit {
 
   ngOnInit() {
     this.loadBanner2();
+      this.resetRemoteIdInput();
   }
+
+  resetRemoteIdInput() {
+    // Clear the remote ID input fields
+    this.connectService.remoteIdArray.forEach(item => {
+        item.number = undefined;
+    });
+}
 
   // ============================================
   // LOAD ONLY ACTIVE BANNER 2
@@ -203,11 +211,41 @@ export class HomePage implements OnInit {
     if (!element) return;
     setTimeout(() => element.focus(), 10);
   }
-
+async disconnect() {
+    const alert = await this.alertCtrl.create({
+        header: 'Disconnect',
+        message: 'Are you sure you want to disconnect?',
+        buttons: [
+            {
+                text: 'Cancel',
+                role: 'cancel'
+            },
+            {
+                text: 'Disconnect',
+                role: 'destructive',
+                handler: () => {
+                    this.connectService.reconnect();  // This will clean up and return to home
+                }
+            }
+        ]
+    });
+    await alert.present();
+}
   // ============================================
   // CONNECT FUNCTION
   // ============================================
-  async connect() {
+ async connect() {
+    // ⭐ ADD THIS CHECK
+    if (this.connectService.connected) {
+        const alert = await this.alertCtrl.create({
+            header: 'Already Connected',
+            message: 'You are already connected to a remote computer. Please disconnect first.',
+            buttons: ['OK']
+        });
+        await alert.present();
+        return;
+    }
+
     const id = this.connectService.remoteIdArray
       .map(item => item.number)
       .join('');
@@ -215,6 +253,7 @@ export class HomePage implements OnInit {
     if (id.length !== 9) {
       const alert = await this.alertCtrl.create({
         header: 'The ID is not complete',
+        buttons: ['OK']  // ⭐ ADD buttons property (was missing)
       });
       await alert.present();
       return;
@@ -222,5 +261,5 @@ export class HomePage implements OnInit {
 
     await this.addressBookService.add({ id });
     this.connectService.connect(id);
-  }
+}
 }

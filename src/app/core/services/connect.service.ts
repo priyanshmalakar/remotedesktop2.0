@@ -1,4 +1,5 @@
 import { Injectable } from '@angular/core';
+import { Router } from '@angular/router';
 import { AlertController, LoadingController } from '@ionic/angular';
 import { Subscription } from 'rxjs';
 import SimplePeer from 'simple-peer';
@@ -43,7 +44,8 @@ hostMicEnabled = false;
         private connectHelperService: ConnectHelperService,
         private loadingCtrl: LoadingController,
         private settingsService: SettingsService,
-        private alertCtrl: AlertController
+        private alertCtrl: AlertController,
+         private router: Router
     ) {}
 
     clipboardListener() {
@@ -644,59 +646,63 @@ stopHostMedia() {
         } catch {}
     }
 
-   async reconnect() {
-    console.log('[CONNECT] 🔄 Starting reconnection...');
+async reconnect() {
+    console.log('[CONNECT] 🔄 Connection lost, returning to home...');
+    
+    // 1. Store the current window reference
     const win = this.electronService.window;
-    try { win.restore(); } catch {}
-  
-    const savedId = this.id;
     
-    // ⭐ CRITICAL: Tell remote we're reconnecting BEFORE destroying anything
-    console.log('[CONNECT] 📡 Notifying remote of reconnection...');
-    if (this.socketService && this.socketService.socket?.connected) {
-        this.socketService.sendMessage('host-reconnecting');
-    }
-    
-    // ⭐ Wait for remote to acknowledge (give it time to clean up)
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    // Now clean up local state
+    // 2. Complete cleanup
     this.connected = false;
     this.dialog = false;
     this.initialized = false;
-
-    // Stop streams
-    if (this.cameraStream) {
-        this.cameraStream.getTracks().forEach(track => track.stop());
-        this.cameraStream = null;
-    }
+    
+    // Stop all media streams
+    this.stopHostMedia();
     if (this.screenStream) {
         this.screenStream.getTracks().forEach(track => track.stop());
         this.screenStream = null;
     }
-
-    // Remove UI
+    
+    // Remove UI elements
     const localVideo = document.getElementById('localUserVideo');
     const remoteVideo = document.getElementById('remoteUserVideo');
     if (localVideo) localVideo.remove();
     if (remoteVideo) remoteVideo.remove();
     this.removeChatWindow();
-
-    // Destroy connections
+    
+    // Destroy all connections
     await this.destroy();
-  
-    // Restore ID (important for rejoining same room)
-    this.id = savedId;
-    this.idArray = ('' + this.id).split('');
     
-    // ⭐ Wait longer before reinitializing
-    console.log('[CONNECT] ⏳ Waiting 1s before reinitializing...');
-    setTimeout(() => {
-        console.log('[CONNECT] 🔄 Reinitializing connection...');
-        this.init();
-    }, 1000); // Increased from 500ms
-    
+    // Close info window if open
     this.connectHelperService.closeInfoWindow();
+    
+    // 3. Show notification
+    const alert = await this.alertCtrl.create({
+        header: 'Connection Ended',
+        message: 'The remote connection has been closed. You can start a new connection from the home screen.',
+        buttons: ['OK']
+    });
+    await alert.present();
+    
+    // 4. ⭐ Navigate back to home page
+    try {
+        this.router.navigate(['/home']);
+        console.log('[CONNECT] ✅ Navigated to /home');
+    } catch (err) {
+        console.error('[CONNECT] Navigation error:', err);
+    }
+    
+    // 5. Restore and show window
+    try { 
+        win.restore(); 
+        win.show(); 
+        win.focus();
+    } catch (err) {
+        console.warn('[CONNECT] Window restore error:', err);
+    }
+    
+    console.log('[CONNECT] ✅ Ready for new connection');
 }
 
 

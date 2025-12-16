@@ -318,27 +318,34 @@ export class AppComponent implements AfterViewInit {
   // ==============================
   // SCREEN SELECT MODAL
   // ==============================
-  async screenSelect(autoSelect = true, replaceVideo?: boolean) {
+async screenSelect(autoSelect = true, replaceVideo?: boolean) {
+    // ⭐ Reset initDone if coming back from disconnect
+    if (!autoSelect) {
+        this.initDone = false;
+    }
+    
     const modal = await this.modalCtrl.create({
-      component: ScreenSelectComponent,
-      backdropDismiss: false,
-      componentProps: { autoSelect },
+        component: ScreenSelectComponent,
+        backdropDismiss: false,
+        componentProps: { autoSelect },
     });
 
     modal.onDidDismiss().then(data => {
-      if (data?.data) {
-        if (replaceVideo) {
-          this.connectService.replaceVideo(data.data.stream);
-        } else {
-          this.connectService.videoSource = data.data;
-          if (!this.initDone) this.init();
+        if (data?.data) {
+            if (replaceVideo) {
+                this.connectService.replaceVideo(data.data.stream);
+            } else {
+                this.connectService.videoSource = data.data;
+                // ⭐ Always allow init if we have video source
+                if (!this.initDone) {
+                    this.init();
+                }
+            }
         }
-      }
     });
 
     await modal.present();
-  }
-
+}
   // ==============================
   // INIT CONNECTION
   // ==============================
