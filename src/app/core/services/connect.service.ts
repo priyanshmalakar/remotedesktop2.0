@@ -568,73 +568,88 @@ stopHostMedia() {
         }
         this.idArray = ('' + this.id).split('');
     }
+async init() {
+    if (this.initialized) {
+        console.log('[CONNECT] ⚠️ Already initialized');
+        return;
+    }
+    
+    this.initialized = true;
+    await this.generateId();
 
-    async init() {
-        if (this.initialized) return;
-        this.initialized = true;
-        await this.generateId();
+    if (this.electronService.isElectron) {
+        try { await keyboard.type(''); } catch {}
+    }
 
-        if (this.electronService.isElectron) {
-            try { await keyboard.type(''); } catch {}
-        }
+    this.loading = await this.loadingCtrl.create({ duration: 15000 });
 
-        this.loading = await this.loadingCtrl.create({ duration: 15000 });
+    this.spf = new SimplePeerFiles();
+    
+    // ⭐ Initialize socket
+    this.socketService.init();
+    
+    // ⭐ IMPORTANT: Join room with current ID
+    console.log('[CONNECT] 📥 Joining room with ID:', this.id);
+    this.socketService.joinRoom(this.id);
 
-        this.spf = new SimplePeerFiles();
-        this.socketService.init();
-        this.socketService.joinRoom(this.id);
-
-        this.sub3 = this.socketService.onDisconnected().subscribe(async () => {
-            const alert = await this.alertCtrl.create({ header: 'Info', message: 'Connection terminated', buttons: ['OK'] });
-            await alert.present();
-            this.reconnect();
+    this.sub3 = this.socketService.onDisconnected().subscribe(async () => {
+        const alert = await this.alertCtrl.create({ 
+            header: 'Info', 
+            message: 'Connection terminated', 
+            buttons: ['OK'] 
         });
+        await alert.present();
+        this.reconnect();
+    });
 
-        this.socketSub = this.socketService.onNewMessage().subscribe(async (data: any) => {
-            if (typeof data === 'string') {
-                if (data === 'hi') {
-                    if (this.dialog) return;
-                    this.dialog = true;
-                    this.sendScreenSize();
+    this.socketSub = this.socketService.onNewMessage().subscribe(async (data: any) => {
+        if (typeof data === 'string') {
+            if (data === 'hi') {
+                if (this.dialog) return;
+                this.dialog = true;
+                this.sendScreenSize();
 
-                    if (this.settingsService.settings?.hiddenAccess) {
-                        this.socketService.sendMessage('pwRequest');
-                        return;
-                    } else {
-                        const win = this.electronService.window;
-                        try { win.show(); win.focus(); win.restore(); } catch {}
-                        const result = await this.askForConnectPermission();
-                        this.dialog = false;
-                        if (!result) {
-                            this.socketService.sendMessage('decline');
-                            try { this.loading.dismiss(); } catch {}
-                            return;
-                        }
-                        await this.videoConnector();
-                    }
-                } else if (data.startsWith('pwAnswer')) {
-                    const pw = data.replace(data.substring(0, 9), '');
-                    const pwCorrect = await this.electronService.bcryptjs.compare(
-                        pw,
-                        this.settingsService.settings.passwordHash
-                    );
-                    if (pwCorrect) await this.videoConnector();
-                    else {
-                        this.socketService.sendMessage('pwWrong');
+                if (this.settingsService.settings?.hiddenAccess) {
+                    this.socketService.sendMessage('pwRequest');
+                    return;
+                } else {
+                    const win = this.electronService.window;
+                    try { win.show(); win.focus(); win.restore(); } catch {}
+                    const result = await this.askForConnectPermission();
+                    this.dialog = false;
+                    if (!result) {
+                        this.socketService.sendMessage('decline');
                         try { this.loading.dismiss(); } catch {}
-                        const alert = await this.alertCtrl.create({ header: 'Password not correct', buttons: ['OK'] });
-                        await alert.present();
+                        return;
                     }
-                } else if (data.startsWith('decline')) {
-                    try { this.loading.dismiss(); } catch {}
-                } else if (this.peer1) {
-                    this.peer1.signal(data);
+                    await this.videoConnector();
                 }
+            } else if (data.startsWith('pwAnswer')) {
+                const pw = data.replace(data.substring(0, 9), '');
+                const pwCorrect = await this.electronService.bcryptjs.compare(
+                    pw,
+                    this.settingsService.settings.passwordHash
+                );
+                if (pwCorrect) await this.videoConnector();
+                else {
+                    this.socketService.sendMessage('pwWrong');
+                    try { this.loading.dismiss(); } catch {}
+                    const alert = await this.alertCtrl.create({ 
+                        header: 'Password not correct', 
+                        buttons: ['OK'] 
+                    });
+                    await alert.present();
+                }
+            } else if (data.startsWith('decline')) {
+                try { this.loading.dismiss(); } catch {}
             } else if (this.peer1) {
                 this.peer1.signal(data);
             }
-        });
-    }
+        } else if (this.peer1) {
+            this.peer1.signal(data);
+        }
+    });
+}
 
     replaceVideo(stream) {
         try {
@@ -645,18 +660,24 @@ stopHostMedia() {
             this.peer1.addStream(stream);
         } catch {}
     }
-
 async reconnect() {
-    console.log('[CONNECT] 🔄 Connection lost, complete cleanup...');
+    console.log('[CONNECT] 🔄 Connection lost, cleaning up room...');
     
     const win = this.electronService.window;
     
-    // 1. FULL STATE RESET
+    // ⭐ SAVE THE HOST ID (don't clear it!)
+    const savedId = this.id;
+    const savedIdArray = [...this.idArray];
+    
+    // 1. STATE RESET (but keep ID)
     this.connected = false;
     this.dialog = false;
     this.initialized = false;
-    this.id = '';
-    this.idArray = [];
+    // ⭐ DON'T CLEAR THESE:
+    // this.id = '';
+    // this.idArray = [];
+    
+    // Clear remote ID only
     this.remoteId = '';
     this.remoteIdArray = [{}, {}, {}, {}, {}, {}, {}, {}];
     
@@ -674,16 +695,20 @@ async reconnect() {
     if (remoteVideo) remoteVideo.remove();
     this.removeChatWindow();
     
-    // 4. Destroy connections (⭐ AWAIT THIS)
+    // 4. Destroy connections
     await this.destroy();
     
     // 5. Close info window
     this.connectHelperService.closeInfoWindow();
     
+    // ⭐ RESTORE THE HOST ID
+    this.id = savedId;
+    this.idArray = savedIdArray;
+    
     // 6. Show alert
     const alert = await this.alertCtrl.create({
         header: 'Connection Ended',
-        message: 'The remote connection has been closed. You can start a new connection from the home screen.',
+        message: 'The remote connection has been closed. You can accept new connections with the same ID.',
         buttons: ['OK']
     });
     await alert.present();
@@ -691,7 +716,7 @@ async reconnect() {
     // 7. Navigate to home
     try {
         await this.router.navigate(['/home']);
-        console.log('[CONNECT] ✅ Navigated to /home');
+        console.log('[CONNECT] ✅ Navigated to /home, ID preserved:', this.id);
     } catch (err) {
         console.error('[CONNECT] Navigation error:', err);
     }
@@ -703,7 +728,7 @@ async reconnect() {
         win.focus();
     } catch (err) {}
     
-    console.log('[CONNECT] ✅ Ready for new connection');
+    console.log('[CONNECT] ✅ Ready for new connection with same ID');
 }
 
 
@@ -739,7 +764,12 @@ async reconnect() {
 //     this.connectHelperService.closeInfoWindow();
 // }
 async destroy() {
-    console.log('[CONNECT] 🧹 Destroying all connections...');
+    console.log('[CONNECT] 🧹 Destroying connections (keeping ID)...');
+    
+    // ⭐ SAVE ID BEFORE DESTROY
+    const savedId = this.id;
+    const savedIdArray = [...this.idArray];
+    
     this.initialized = false;
     this.connected = false;
     
@@ -754,7 +784,7 @@ async destroy() {
     }
     
     try {
-        await this.socketService?.destroy(); // ⭐ Make sure this is awaited
+        await this.socketService?.destroy();
     } catch (err) {
         console.error('[CONNECT] Socket destroy error:', err);
     }
@@ -768,12 +798,16 @@ async destroy() {
         this.electronService.remote.screen.removeAllListeners();
     } catch (err) {}
     
-    // ⭐ Nullify streams
+    // Nullify streams
     this.stopHostMedia();
     this.cameraStream = null;
     this.screenStream = null;
     
-    console.log('[CONNECT] ✅ Destroy complete');
+    // ⭐ RESTORE ID AFTER DESTROY
+    this.id = savedId;
+    this.idArray = savedIdArray;
+    
+    console.log('[CONNECT] ✅ Destroy complete, ID preserved:', this.id);
 }
     connect(id) {
         if (this.electronService.isElectronApp) {

@@ -64,7 +64,6 @@ export class SocketService {
       console.error('[SOCKET] ❌ Socket error:', err);
     });
   }
-
 destroy() {
     console.log('[SOCKET] 🧹 Destroying socket connection');
     
@@ -89,19 +88,24 @@ destroy() {
                 this.socket = null;
             }
             
-            // 5. Clear state
-            this.currentRoom = null;
+            // 5. ⭐ DON'T CLEAR currentRoom - it's needed for reconnection!
+            // this.currentRoom = null; ← REMOVE THIS LINE
             this.messageQueue = [];
             
-            console.log('[SOCKET] ✅ Destroy complete');
+            console.log('[SOCKET] ✅ Destroy complete, room preserved:', this.currentRoom);
             resolve();
         } catch (err) {
             console.error('[SOCKET] ❌ Error destroying:', err);
-            resolve(); // Resolve anyway to not block
+            resolve();
         }
     });
 }
 
+
+clearRoom() {
+    console.log('[SOCKET] 🧹 Clearing room');
+    this.currentRoom = null;
+}
 
   joinRoom(id: string) {
     console.log('[SOCKET] 📥 Joining room:', id);

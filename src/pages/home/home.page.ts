@@ -123,25 +123,36 @@ export class HomePage implements OnInit {
 
   ngOnInit() {
     this.loadBanner2();
-    this.resetRemoteIdInput();
+    this.resetRemoteIdInput(); 
     this.ensureServiceClean();
-  }
+}
 
   // ⭐ NEW METHOD
   ionViewWillEnter() {
     console.log('[HOME] 🏠 Entering home page');
-    this.resetRemoteIdInput();
+    this.resetRemoteIdInput(); // ⭐ Only reset REMOTE ID input
     this.ensureServiceClean();
-  }
+}
 
   // ⭐ NEW METHOD
-  async ensureServiceClean() {
+ async ensureServiceClean() {
+    // ⭐ Only destroy connections, NOT the ID
     if (this.connectService.initialized) {
-        console.log('[HOME] ⚠️ Service still initialized, forcing cleanup...');
+        console.log('[HOME] ⚠️ Service still initialized, cleaning connections...');
+        
+        // Save ID before destroy
+        const savedId = this.connectService.id;
+        const savedIdArray = [...this.connectService.idArray];
+        
         await this.connectService.destroy();
-        console.log('[HOME] ✅ Service reset complete');
+        
+        // Restore ID after destroy
+        this.connectService.id = savedId;
+        this.connectService.idArray = savedIdArray;
+        
+        console.log('[HOME] ✅ Connections cleaned, ID preserved:', savedId);
     }
-  }
+}
 
   resetRemoteIdInput() {
     this.connectService.remoteIdArray.forEach(item => {
