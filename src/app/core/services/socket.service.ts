@@ -66,23 +66,40 @@ export class SocketService {
   }
 
 destroy() {
-    console.log('[SOCKET] Destroying socket connection');
-    try {
-        if (this.socket) {
-            // Leave room before disconnecting
-            if (this.currentRoom && this.socket.connected) {
-                this.socket.emit('leave', this.currentRoom);
+    console.log('[SOCKET] 🧹 Destroying socket connection');
+    
+    return new Promise<void>((resolve) => {
+        try {
+            if (this.socket) {
+                // 1. Leave room first
+                if (this.currentRoom && this.socket.connected) {
+                    console.log('[SOCKET] Leaving room:', this.currentRoom);
+                    this.socket.emit('leave', this.currentRoom);
+                }
+                
+                // 2. Remove all listeners
+                this.socket.removeAllListeners();
+                console.log('[SOCKET] All listeners removed');
+                
+                // 3. Disconnect
+                this.socket.disconnect();
+                console.log('[SOCKET] Socket disconnected');
+                
+                // 4. Nullify reference
+                this.socket = null;
             }
             
-            this.socket.removeAllListeners();
-            this.socket.disconnect();
-            this.socket = null;
+            // 5. Clear state
+            this.currentRoom = null;
+            this.messageQueue = [];
+            
+            console.log('[SOCKET] ✅ Destroy complete');
+            resolve();
+        } catch (err) {
+            console.error('[SOCKET] ❌ Error destroying:', err);
+            resolve(); // Resolve anyway to not block
         }
-        this.currentRoom = null;
-        this.messageQueue = [];
-    } catch (err) {
-        console.error('[SOCKET] Error destroying:', err);
-    }
+    });
 }
 
 

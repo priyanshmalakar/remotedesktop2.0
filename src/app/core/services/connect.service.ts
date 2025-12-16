@@ -647,37 +647,40 @@ stopHostMedia() {
     }
 
 async reconnect() {
-    console.log('[CONNECT] 🔄 Connection lost, returning to home...');
+    console.log('[CONNECT] 🔄 Connection lost, complete cleanup...');
     
-    // 1. Store the current window reference
     const win = this.electronService.window;
     
-    // 2. Complete cleanup
+    // 1. FULL STATE RESET
     this.connected = false;
     this.dialog = false;
     this.initialized = false;
+    this.id = '';
+    this.idArray = [];
+    this.remoteId = '';
+    this.remoteIdArray = [{}, {}, {}, {}, {}, {}, {}, {}];
     
-    // Stop all media streams
+    // 2. Stop all media
     this.stopHostMedia();
     if (this.screenStream) {
         this.screenStream.getTracks().forEach(track => track.stop());
         this.screenStream = null;
     }
     
-    // Remove UI elements
+    // 3. Remove UI elements
     const localVideo = document.getElementById('localUserVideo');
     const remoteVideo = document.getElementById('remoteUserVideo');
     if (localVideo) localVideo.remove();
     if (remoteVideo) remoteVideo.remove();
     this.removeChatWindow();
     
-    // Destroy all connections
+    // 4. Destroy connections (⭐ AWAIT THIS)
     await this.destroy();
     
-    // Close info window if open
+    // 5. Close info window
     this.connectHelperService.closeInfoWindow();
     
-    // 3. Show notification
+    // 6. Show alert
     const alert = await this.alertCtrl.create({
         header: 'Connection Ended',
         message: 'The remote connection has been closed. You can start a new connection from the home screen.',
@@ -685,22 +688,20 @@ async reconnect() {
     });
     await alert.present();
     
-    // 4. ⭐ Navigate back to home page
+    // 7. Navigate to home
     try {
-        this.router.navigate(['/home']);
+        await this.router.navigate(['/home']);
         console.log('[CONNECT] ✅ Navigated to /home');
     } catch (err) {
         console.error('[CONNECT] Navigation error:', err);
     }
     
-    // 5. Restore and show window
+    // 8. Restore window
     try { 
         win.restore(); 
         win.show(); 
         win.focus();
-    } catch (err) {
-        console.warn('[CONNECT] Window restore error:', err);
-    }
+    } catch (err) {}
     
     console.log('[CONNECT] ✅ Ready for new connection');
 }
@@ -737,37 +738,42 @@ async reconnect() {
 //     setTimeout(() => this.init(), 500);
 //     this.connectHelperService.closeInfoWindow();
 // }
-    async destroy() {
+async destroy() {
     console.log('[CONNECT] 🧹 Destroying all connections...');
     this.initialized = false;
+    this.connected = false;
     
     try {
         if (this.peer1) {
-            this.peer1.removeAllListeners(); // ← Add this
-            await this.peer1.destroy();
-            this.peer1 = null; // ← Add this
+            this.peer1.removeAllListeners();
+            this.peer1.destroy();
+            this.peer1 = null;
         }
     } catch (err) {
         console.error('[CONNECT] Peer destroy error:', err);
     }
     
     try {
-        await this.socketService?.destroy();
-    } catch {}
+        await this.socketService?.destroy(); // ⭐ Make sure this is awaited
+    } catch (err) {
+        console.error('[CONNECT] Socket destroy error:', err);
+    }
     
     try {
         this.socketSub?.unsubscribe();
         this.sub3?.unsubscribe();
-    } catch {}
+    } catch (err) {}
     
     try {
         this.electronService.remote.screen.removeAllListeners();
-    } catch {}
+    } catch (err) {}
     
-    // ⭐ Ensure streams are nullified
+    // ⭐ Nullify streams
     this.stopHostMedia();
     this.cameraStream = null;
     this.screenStream = null;
+    
+    console.log('[CONNECT] ✅ Destroy complete');
 }
     connect(id) {
         if (this.electronService.isElectronApp) {

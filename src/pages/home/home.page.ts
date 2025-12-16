@@ -93,7 +93,6 @@
 
 
 // new add banner related to new version update
-
 import { Component, HostListener, OnInit } from '@angular/core';
 import { AlertController, ModalController } from '@ionic/angular';
 import { UntilDestroy } from '@ngneat/until-destroy';
@@ -111,7 +110,6 @@ import { AdsService } from '../../app/core/services/ads.service';
 })
 export class HomePage implements OnInit {
 
-  // ✅ ONLY BANNER 2
   banner2: any = null;
 
   constructor(
@@ -125,26 +123,37 @@ export class HomePage implements OnInit {
 
   ngOnInit() {
     this.loadBanner2();
-      this.resetRemoteIdInput();
+    this.resetRemoteIdInput();
+    this.ensureServiceClean();
+  }
+
+  // ⭐ NEW METHOD
+  ionViewWillEnter() {
+    console.log('[HOME] 🏠 Entering home page');
+    this.resetRemoteIdInput();
+    this.ensureServiceClean();
+  }
+
+  // ⭐ NEW METHOD
+  async ensureServiceClean() {
+    if (this.connectService.initialized) {
+        console.log('[HOME] ⚠️ Service still initialized, forcing cleanup...');
+        await this.connectService.destroy();
+        console.log('[HOME] ✅ Service reset complete');
+    }
   }
 
   resetRemoteIdInput() {
-    // Clear the remote ID input fields
     this.connectService.remoteIdArray.forEach(item => {
         item.number = undefined;
     });
-}
+  }
 
-  // ============================================
-  // LOAD ONLY ACTIVE BANNER 2
-  // ============================================
   loadBanner2() {
     this.adsService.getAds().subscribe({
       next: (ads: any[]) => {
         if (!Array.isArray(ads)) return;
-
-        this.banner2 =
-          ads.find(ad => ad.title === 'banner2' && ad.isActive) || null;
+        this.banner2 = ads.find(ad => ad.title === 'banner2' && ad.isActive) || null;
       },
       error: (err) => {
         console.error('Banner2 load error:', err);
@@ -152,29 +161,19 @@ export class HomePage implements OnInit {
     });
   }
 
-  // ============================================
-  // BANNER CLICK → REDIRECT
-  // ============================================
   openBannerLink(banner: any) {
     if (!banner?.redirectLink) return;
     window.open(banner.redirectLink, '_blank');
   }
 
-  // ============================================
-  // PASTE ID HANDLER
-  // ============================================
   @HostListener('document:paste', ['$event'])
   onPaste(event: ClipboardEvent) {
     const id: string = (event.clipboardData?.getData('text') || '')
       .trim()
       .replace(/(\r\n|\n|\r)/gm, '');
-
     this.connectService.setId(id);
   }
 
-  // ============================================
-  // SCREEN SELECT MODAL
-  // ============================================
   async screenSelect(autoSelect = true, replaceVideo?: boolean) {
     const modal = await this.modalCtrl.create({
       component: ScreenSelectComponent,
@@ -195,9 +194,6 @@ export class HomePage implements OnInit {
     await modal.present();
   }
 
-  // ============================================
-  // DIGIT INPUT HANDLER
-  // ============================================
   onDigitInput(event: any) {
     let element;
 
@@ -211,7 +207,8 @@ export class HomePage implements OnInit {
     if (!element) return;
     setTimeout(() => element.focus(), 10);
   }
-async disconnect() {
+
+  async disconnect() {
     const alert = await this.alertCtrl.create({
         header: 'Disconnect',
         message: 'Are you sure you want to disconnect?',
@@ -224,22 +221,20 @@ async disconnect() {
                 text: 'Disconnect',
                 role: 'destructive',
                 handler: () => {
-                    this.connectService.reconnect();  // This will clean up and return to home
+                    this.connectService.reconnect();
                 }
             }
         ]
     });
     await alert.present();
-}
-  // ============================================
-  // CONNECT FUNCTION
-  // ============================================
- async connect() {
-    // ⭐ ADD THIS CHECK
+  }
+
+  async connect() {
+    // Check if already connected
     if (this.connectService.connected) {
         const alert = await this.alertCtrl.create({
             header: 'Already Connected',
-            message: 'You are already connected to a remote computer. Please disconnect first.',
+            message: 'You are already connected. Please disconnect first.',
             buttons: ['OK']
         });
         await alert.present();
@@ -253,13 +248,18 @@ async disconnect() {
     if (id.length !== 9) {
       const alert = await this.alertCtrl.create({
         header: 'The ID is not complete',
-        buttons: ['OK']  // ⭐ ADD buttons property (was missing)
+        buttons: ['OK']
       });
       await alert.present();
       return;
     }
 
     await this.addressBookService.add({ id });
+    
+    // ⭐ Add delay to ensure cleanup
+    console.log('[HOME] Starting new connection to:', id);
+    await new Promise(resolve => setTimeout(resolve, 300));
+    
     this.connectService.connect(id);
-}
+  }
 }

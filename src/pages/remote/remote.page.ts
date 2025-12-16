@@ -992,49 +992,50 @@ export class RemotePage implements OnInit, OnDestroy {
             console.log('[REMOTE] ⏳ Waiting for host camera track...');
         }
     }
-    async close() {
-        console.log('[REMOTE] 🔄 Connection ended, returning to home...');
+  async close() {
+    console.log('[REMOTE] 🔄 Connection ended, complete cleanup...');
 
-        this.connected = false;
-        this.removeEventListeners();
-        this.stopVideoCall();
+    // 1. Stop connection
+    this.connected = false;
+    this.removeEventListeners();
+    this.stopVideoCall();
 
-        // Clean up peer
-        try {
-            if (this.peer2) {
-                this.peer2.removeAllListeners();
-                this.peer2.destroy();
-                this.peer2 = null;
-            }
-        } catch (err) {
-            console.error('[REMOTE] Peer cleanup error:', err);
+    // 2. Clean up peer PROPERLY
+    try {
+        if (this.peer2) {
+            this.peer2.removeAllListeners(); // ⭐ Remove all listeners first
+            this.peer2.destroy();
+            this.peer2 = null; // ⭐ Nullify reference
         }
-
-        // Clean up socket
-        try {
-            this.socketService?.destroy();
-        } catch (err) {
-            console.error('[REMOTE] Socket cleanup error:', err);
-        }
-
-        // Show alert
-        const alert = await this.alertCtrl.create({
-            header: 'Connection Ended',
-            message:
-                'Connection to the host has ended. Returning to home screen.',
-            buttons: [
-                {
-                    text: 'OK',
-                    handler: () => {
-                        // Navigate back to home
-                        this.navigateToHome();
-                    },
-                },
-            ],
-        });
-
-        await alert.present();
+    } catch (err) {
+        console.error('[REMOTE] Peer cleanup error:', err);
     }
+
+    // 3. Clean up socket PROPERLY
+    try {
+        if (this.socketService) {
+            this.socketService.destroy();
+        }
+    } catch (err) {
+        console.error('[REMOTE] Socket cleanup error:', err);
+    }
+
+    // 4. Show alert
+    const alert = await this.alertCtrl.create({
+        header: 'Connection Ended',
+        message: 'Connection to the host has ended.',
+        buttons: [
+            {
+                text: 'OK',
+                handler: () => {
+                    this.navigateToHome();
+                },
+            },
+        ],
+    });
+
+    await alert.present();
+}
 
     // ⭐ NEW METHOD - Add this right after close()
     private navigateToHome() {
