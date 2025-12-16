@@ -6,7 +6,7 @@ import { HttpClient } from '@angular/common/http';
 })
 export class AdsService {
 
-  private api = 'https://remote-desktop-landingpage-backend.onrender.com/api/ads';
+  private api = 'http://localhost:5000/api/ads';
 
   constructor(private http: HttpClient) {}
 
