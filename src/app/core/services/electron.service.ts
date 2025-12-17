@@ -1,9 +1,6 @@
 import { Injectable } from '@angular/core';
 import * as remote from '@electron/remote';
 import * as main from '@electron/remote/main';
-// COMMENTED OUT: NutJS import that's causing the issue
-// import * as nutJs from '@nut-tree-fork/nut-js';
-// import * as AutoLaunch from 'auto-launch';
 import * as bcryptjs from 'bcryptjs';
 import * as childProcess from 'child_process';
 import {
@@ -41,8 +38,6 @@ export class ElectronService {
     clipboard: typeof clipboard;
     nodeMachineId: typeof nodeMachineId;
     
-    // COMMENTED OUT: NutJS property that's causing the issue
-    // nutJs: typeof nutJs;
     
     get isElectron(): boolean {
         return !!(window && window.process && window.process.type);
@@ -50,17 +45,13 @@ export class ElectronService {
     
     constructor() {
         // Conditional imports
-        if (this.isElectron) {
-            // COMMENTED OUT: NutJS require that's causing the binding error
-            // this.nutJs = window.require('@nut-tree-fork/nut-js');
-            
+        if (this.isElectron) {            
             try {
                 this.autoUpdater = window.require('electron-updater');
                 this.remote = window.require('@electron/remote');
                 this.main = window.require('@electron/remote/main');
                 this.app = this.remote.app;
                 this.os = window.require('os');
-                // this.autoLaunch = window.require('auto-launch');
                 this.bcryptjs = window.require('bcryptjs');
                 this.nodeMachineId = window.require('node-machine-id');
                 this.window = this.remote.getCurrentWindow();
@@ -79,7 +70,6 @@ export class ElectronService {
                     console.log('CommandOrControl+O');
                 });
                 this.remote.globalShortcut.register('Control+Shift+I', () => {
-                    // return false;
                       this.window.webContents.openDevTools();
                 });
             } catch (error) {
