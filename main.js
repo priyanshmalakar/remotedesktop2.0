@@ -174,6 +174,7 @@ function createWindow() {
                 win.show();
             });
             if (serve) {
+                win.webContents.openDevTools();
                 require('electron-reload')(__dirname, {
                     electron: require("".concat(__dirname, "/node_modules/electron")),
                 });
@@ -186,9 +187,7 @@ function createWindow() {
                     slashes: true,
                 }));
             }
-            win.webContents.once('did-finish-load', function () {
-                win.webContents.openDevTools();
-            });
+            // win.webContents.openDevTools();
             // Emitted when the window is closed.
             win.on('closed', function () {
                 // Dereference the window object, usually you would store window
@@ -198,7 +197,7 @@ function createWindow() {
             });
             win.webContents.on('before-input-event', function (event, input) {
                 if (input.control && input.shift && input.key.toLowerCase() === 'i') {
-                    win.webContents.openDevTools();
+                    // win.webContents.openDevTools();
                     event.preventDefault();
                 }
             });
