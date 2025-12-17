@@ -123,40 +123,12 @@ export class HomePage implements OnInit {
 
   ngOnInit() {
     this.loadBanner2();
-    this.resetRemoteIdInput(); 
-    this.ensureServiceClean();
-}
-
-  // ⭐ NEW METHOD
-  ionViewWillEnter() {
-    console.log('[HOME] 🏠 Entering home page');
-    this.resetRemoteIdInput(); // ⭐ Only reset REMOTE ID input
-    this.ensureServiceClean();
-}
-
-  // ⭐ NEW METHOD
- async ensureServiceClean() {
-    // ⭐ Only destroy connections, NOT the ID
-    if (this.connectService.initialized) {
-        console.log('[HOME] ⚠️ Service still initialized, cleaning connections...');
-        
-        // Save ID before destroy
-        const savedId = this.connectService.id;
-        const savedIdArray = [...this.connectService.idArray];
-        
-        await this.connectService.destroy();
-        
-        // Restore ID after destroy
-        this.connectService.id = savedId;
-        this.connectService.idArray = savedIdArray;
-        
-        console.log('[HOME] ✅ Connections cleaned, ID preserved:', savedId);
-    }
-}
+    this.resetRemoteIdInput();
+  }
 
   resetRemoteIdInput() {
     this.connectService.remoteIdArray.forEach(item => {
-        item.number = undefined;
+      item.number = undefined;
     });
   }
 
@@ -164,26 +136,40 @@ export class HomePage implements OnInit {
     this.adsService.getAds().subscribe({
       next: (ads: any[]) => {
         if (!Array.isArray(ads)) return;
-        this.banner2 = ads.find(ad => ad.title === 'banner2' && ad.isActive) || null;
-      },
-      error: (err) => {
-        console.error('Banner2 load error:', err);
+        this.banner2 =
+          ads.find(ad => ad.title === 'banner2' && ad.isActive) || null;
       }
     });
   }
 
   openBannerLink(banner: any) {
-    if (!banner?.redirectLink) return;
-    window.open(banner.redirectLink, '_blank');
+    if (banner?.redirectLink) {
+      window.open(banner.redirectLink, '_blank');
+    }
   }
 
   @HostListener('document:paste', ['$event'])
   onPaste(event: ClipboardEvent) {
-    const id: string = (event.clipboardData?.getData('text') || '')
+    const id = (event.clipboardData?.getData('text') || '')
       .trim()
       .replace(/(\r\n|\n|\r)/gm, '');
     this.connectService.setId(id);
   }
+
+  async copyMyId() {
+  const id = this.connectService.idArray.join('');
+
+  await navigator.clipboard.writeText(id);
+
+  const alert = await this.alertCtrl.create({
+    header: 'Copied',
+    message: 'ID copied to clipboard',
+    buttons: ['OK']
+  });
+
+  await alert.present();
+}
+
 
   async screenSelect(autoSelect = true, replaceVideo?: boolean) {
     const modal = await this.modalCtrl.create({
@@ -194,11 +180,9 @@ export class HomePage implements OnInit {
 
     modal.onDidDismiss().then((data) => {
       if (data?.data) {
-        if (replaceVideo) {
-          this.connectService.replaceVideo(data.data.stream);
-        } else {
-          this.connectService.videoSource = data.data;
-        }
+        replaceVideo
+          ? this.connectService.replaceVideo(data.data.stream)
+          : this.connectService.videoSource = data.data;
       }
     });
 
@@ -207,53 +191,44 @@ export class HomePage implements OnInit {
 
   onDigitInput(event: any) {
     let element;
-
     if (event.code !== 'Backspace') {
       element = event.srcElement.nextElementSibling;
     } else {
       element = event.srcElement.previousElementSibling;
       if (element) element.value = '';
     }
-
-    if (!element) return;
-    setTimeout(() => element.focus(), 10);
+    if (element) setTimeout(() => element.focus(), 10);
   }
 
   async disconnect() {
     const alert = await this.alertCtrl.create({
-        header: 'Disconnect',
-        message: 'Are you sure you want to disconnect?',
-        buttons: [
-            {
-                text: 'Cancel',
-                role: 'cancel'
-            },
-            {
-                text: 'Disconnect',
-                role: 'destructive',
-                handler: () => {
-                    this.connectService.reconnect();
-                }
-            }
-        ]
+      header: 'Disconnect',
+      message: 'Are you sure you want to disconnect?',
+      buttons: [
+        { text: 'Cancel', role: 'cancel' },
+        {
+          text: 'Disconnect',
+          role: 'destructive',
+          handler: () => this.connectService.reconnect()
+        }
+      ]
     });
     await alert.present();
   }
 
   async connect() {
-    // Check if already connected
     if (this.connectService.connected) {
-        const alert = await this.alertCtrl.create({
-            header: 'Already Connected',
-            message: 'You are already connected. Please disconnect first.',
-            buttons: ['OK']
-        });
-        await alert.present();
-        return;
+      const alert = await this.alertCtrl.create({
+        header: 'Already Connected',
+        message: 'Please disconnect first.',
+        buttons: ['OK']
+      });
+      await alert.present();
+      return;
     }
 
     const id = this.connectService.remoteIdArray
-      .map(item => item.number)
+      .map(i => i.number)
       .join('');
 
     if (id.length !== 9) {
