@@ -48,6 +48,14 @@
         Disconnect
       </ion-button>
 
+      <ion-button 
+    *ngIf="electronService.isElectron" 
+    (click)="electronService.restart()"
+    color="warning">
+    <ion-icon name="refresh-outline" slot="start"></ion-icon>
+    Restart App
+</ion-button>
+
     </ion-toolbar>
   </div>
 </ion-header>

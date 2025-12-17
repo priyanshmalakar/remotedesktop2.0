@@ -18,15 +18,12 @@ import { autoUpdater } from 'electron-updater';
 import * as path from 'path';
 import * as url from 'url';
 
-
 // const isDev = process.env.NODE_ENV !== 'production';
 // if (isDev) {
 //     require('dotenv').config();
 // }
 
 require('@electron/remote/main').initialize();
-
-
 
 ipcMain.handle('DESKTOP_CAPTURER_GET_SOURCES', (event, opts) =>
     desktopCapturer.getSources(opts)
@@ -61,8 +58,6 @@ autoUpdater.setFeedURL({
     releaseType: 'release',
 });
 autoUpdater.autoDownload = true;
-
-
 
 autoUpdater.on('download-progress', progressObj => {
     let log_message = 'Download speed: ' + progressObj.bytesPerSecond;
@@ -169,7 +164,6 @@ async function createWindow(): Promise<Electron.BrowserWindow> {
     });
 
     if (serve) {
-        win.webContents.openDevTools();
         require('electron-reload')(__dirname, {
             electron: require(`${__dirname}/node_modules/electron`),
         });
@@ -184,8 +178,10 @@ async function createWindow(): Promise<Electron.BrowserWindow> {
         );
     }
 
-    // win.webContents.openDevTools();
 
+    win.webContents.once('did-finish-load', () => {
+        win.webContents.openDevTools();
+    });
     // Emitted when the window is closed.
     win.on('closed', () => {
         // Dereference the window object, usually you would store window
@@ -196,7 +192,7 @@ async function createWindow(): Promise<Electron.BrowserWindow> {
 
     win.webContents.on('before-input-event', (event, input) => {
         if (input.control && input.shift && input.key.toLowerCase() === 'i') {
-            // win.webContents.openDevTools();
+            win.webContents.openDevTools();
             event.preventDefault();
         }
     });

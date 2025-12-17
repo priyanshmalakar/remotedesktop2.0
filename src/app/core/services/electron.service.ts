@@ -81,6 +81,8 @@ export class ElectronService {
     minimize() {
         this.window.minimize();
     }
+
+   
     
     maximize() {
         if (!this.window.isMaximized()) {
@@ -97,6 +99,15 @@ export class ElectronService {
     close() {
         this.window.close();
     }
+
+     restart() {
+    if (this.isElectron) {
+        this.app.relaunch();
+        this.app.exit(0);
+    }
+} 
+
+
     
     public get isElectronApp(): boolean {
         return !!window.navigator.userAgent.match(/Electron/);
