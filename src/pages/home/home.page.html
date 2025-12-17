@@ -1,16 +1,10 @@
-
-
-<!-- new code add banner related -->
 <ion-header>
-  <div class="bg-gradient-to-r from-blue-200 to-blue-400 shadow-lg">
+  <div class="bg-blue-100">
     <ion-toolbar>
-
-      <!-- MENU -->
       <ion-buttons slot="start">
         <ion-menu-button class="text-blue-900"></ion-menu-button>
       </ion-buttons>
 
-      <!-- TITLE -->
       <ion-title class="!text-blue-900 !font-bold !text-xl">
         <div class="flex items-center gap-2">
           <img
@@ -21,7 +15,6 @@
         </div>
       </ion-title>
 
-      <!-- RIGHT BUTTONS -->
       <ion-buttons slot="end" class="mr-3">
         <ion-spinner
           *ngIf="connectService.fileLoading"
@@ -32,169 +25,147 @@
         <ion-button
           (click)="screenSelect(false, true)"
           fill="clear"
-          class="!text-blue-900 hover:bg-blue-100">
+          class="!text-blue-900">
           <ion-icon name="browsers-outline" class="text-lg"></ion-icon>
         </ion-button>
       </ion-buttons>
-
-      <!-- DISCONNECT -->
-      <ion-button
-        *ngIf="connectService.connected"
-        color="danger"
-        fill="solid"
-        (click)="disconnect()"
-        class="mr-2">
-        <ion-icon name="close-circle-outline" class="mr-1"></ion-icon>
-        Disconnect
-      </ion-button>
-
-      <ion-button 
-    *ngIf="electronService.isElectron" 
-    (click)="electronService.restart()"
-    color="warning">
-    <ion-icon name="refresh-outline" slot="start"></ion-icon>
-    Restart App
-</ion-button>
-
     </ion-toolbar>
   </div>
 </ion-header>
 
 <ion-content>
-  <div class="max-w-6xl mx-auto py-8 ion-padding bg-gray-100 shadow-lg">
+  <div class="max-w-5xl mx-auto py-6 px-4 bg-slate-100">
 
-    <!-- ================= MAIN CARDS ================= -->
-    <div class="grid gap-6 grid-cols-1 lg:grid-cols-2 mb-8">
+    <!-- Top Action Buttons -->
+    <div class="flex justify-end gap-3 mb-6">
+      <button 
+        *ngIf="electronService.isElectron" 
+        (click)="electronService.restart()"
+        class="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-yellow-600 transition text-sm font-medium">
+        Click before connect
+      </button>
 
-      <!-- ================= MY COMPUTER ================= -->
+      <button
+        *ngIf="connectService.connected"
+        (click)="disconnect()"
+        class="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition text-sm font-medium">
+        Disconnect
+      </button>
+    </div>
+
+    <!-- Main Cards Container -->
+    <div class="grid gap-5 grid-cols-1 md:grid-cols-2 mb-6">
+
+      <!-- My Computer Card -->
       <div
         *ngIf="electronService.isElectron"
-        class="bg-white rounded-2xl shadow-2xl border border-gray-200">
+        class="bg-white rounded-lg border border-gray-300 overflow-hidden">
 
-        <!-- HEADER -->
-        <div class="bg-gradient-to-br from-blue-50 to-blue-100 px-8 py-6 border-b-4 border-blue-200">
-          <div class="flex justify-between items-center mb-2">
-            <div class="w-3 h-3 bg-blue-500 rounded-full animate-pulse"></div>
-            <span class="text-xs font-semibold text-blue-600 uppercase">
-              Your Workspace
-            </span>
-          </div>
-          <h2 class="text-blue-800 text-sm uppercase">Share ID</h2>
-          <h4 class="text-blue-900 text-2xl font-bold">My Computer</h4>
+        <div class="bg-blue-50 px-5 py-3 border-b border-gray-300">
+          <div class="text-xs text-gray-600 uppercase tracking-wide mb-1">Your Workspace</div>
+          <h3 class="text-blue-900 text-lg font-bold">My Computer</h3>
         </div>
 
-        <!-- BODY -->
-        <div class="px-8 py-8">
-
-          <!-- ID BOXES (SPACING REDUCED) -->
-          <div class="flex justify-center gap-1">
+        <div class="px-5 py-5">
+          <div class="text-sm text-gray-600 mb-3 text-center">Share this ID</div>
+          
+          <div class="flex justify-center items-center gap-0.5 mb-4">
             <span
               *ngFor="let number of connectService.idArray; let i = index"
-              class="w-11 h-11 bg-blue-600 text-white rounded-lg
-                     flex items-center justify-center text-lg
-                     font-bold shadow-md"
-              [class.mr-2]="i === 2 || i === 5">
+              class="w-9 h-9 bg-blue-600 text-white rounded 
+                     flex items-center justify-center text-base
+                     font-semibold"
+              [class.mr-1.5]="i === 2 || i === 5">
               {{ number }}
             </span>
           </div>
 
-          <!-- COPY BUTTON -->
-          <div class="flex justify-center mt-4">
+          <div class="flex justify-center">
             <button
               (click)="copyMyId()"
-              class="flex items-center gap-2 px-4 py-2
-                     bg-blue-100 text-blue-700 font-semibold
-                     rounded-lg hover:bg-blue-200 transition">
-              <ion-icon name="copy-outline"></ion-icon>
+              class="px-4 py-2 bg-blue-100 text-blue-700 font-medium
+                     rounded hover:bg-blue-200 transition text-sm">
               Copy ID
             </button>
           </div>
 
-          <p class="text-center text-gray-500 text-sm mt-4">
-            Share this ID with someone you trust
+          <p class="text-center text-gray-500 text-xs mt-3">
+            Share with trusted users only
           </p>
         </div>
       </div>
 
-      <!-- ================= REMOTE COMPUTER ================= -->
-      <div class="bg-white rounded-2xl shadow-2xl border border-gray-200">
+      <!-- Remote Computer Card -->
+      <div class="bg-white rounded-lg border border-gray-300 overflow-hidden">
 
-        <!-- HEADER -->
-        <div class="bg-gradient-to-br from-blue-50 to-blue-100 px-8 py-6 border-b-4 border-blue-200">
-          <div class="flex justify-between items-center mb-2">
-            <div class="w-3 h-3 bg-gray-400 rounded-full"></div>
-            <span class="text-xs font-semibold text-blue-600 uppercase">
-              Remote Access
-            </span>
-          </div>
-          <h2 class="text-blue-800 text-sm uppercase">Enter Partner ID</h2>
-          <h4 class="text-blue-900 text-2xl font-bold">Remote Computer</h4>
+        <div class="bg-blue-50 px-5 py-3 border-b border-gray-300">
+          <div class="text-xs text-gray-600 uppercase tracking-wide mb-1">Remote Access</div>
+          <h3 class="text-blue-900 text-lg font-bold">Remote Computer</h3>
         </div>
 
-        <!-- BODY -->
-        <div class="px-6 py-6">
+        <div class="px-5 py-5">
+          <div class="text-sm text-gray-600 mb-3 text-center">Enter Partner ID</div>
 
-          <!-- INPUT BOXES (SPACING REDUCED) -->
-          <div class="flex justify-center gap-1 mb-6">
+          <div class="flex justify-center items-center gap-0.5 mb-4">
             <input
-  #digitInput
-  *ngFor="let number of connectService.remoteIdArray; let i = index"
-  [(ngModel)]="number.number"
-  maxlength="1"
-  (keydown)="onDigitInput($event)"
-  (keydown.enter)="connect()"
-  class="w-11 h-11
-         bg-white
-         border-2 border-gray-300
-         rounded-lg
-         text-center text-lg
-         font-bold
-         text-blue-900
-         shadow-md
-         focus:outline-none
-         focus:ring-2 focus:ring-blue-500
-         transition"
-  [class.mr-2]="i === 2 || i === 5"
+              #digitInput
+              *ngFor="let number of connectService.remoteIdArray; let i = index"
+              [(ngModel)]="number.number"
+              maxlength="1"
+              (keydown)="onDigitInput($event, i)"
+              (keydown.enter)="connect()"
+              class="digit-input w-9 h-9
+                     bg-white
+                     border border-gray-400
+                     rounded
+                     text-center text-base
+                     font-semibold
+                     text-blue-900
+                     focus:outline-none
+                     focus:border-blue-500
+                     focus:ring-1 focus:ring-blue-500
+                     transition"
+              [class.mr-1.5]="i === 2 || i === 5"
             />
           </div>
 
           <button
             (click)="connect()"
             class="w-full bg-blue-600 hover:bg-blue-700
-                   text-white font-bold py-3 rounded-xl
-                   shadow-lg transition">
+                   text-white font-semibold py-2.5 rounded
+                   transition text-sm">
             Connect
           </button>
         </div>
       </div>
     </div>
 
-    <!-- ================= BANNER ================= -->
+    <!-- Banner Section -->
     <div
       *ngIf="banner2"
-      class="m-3 p-3 bg-white rounded-xl shadow-lg
-             cursor-pointer hover:shadow-xl transition"
+      class="bg-white rounded-lg border border-gray-300 overflow-hidden
+             cursor-pointer hover:border-blue-400 transition"
       (click)="openBannerLink(banner2)">
 
       <video
         *ngIf="banner2.videoUrl"
         [src]="banner2.videoUrl"
         autoplay muted loop
-        class="w-full max-h-[300px] object-contain rounded-lg">
+        class="w-full h-48 object-cover">
       </video>
 
       <img
         *ngIf="banner2.image && !banner2.videoUrl"
         [src]="banner2.image"
-        class="w-full max-h-[300px] object-contain rounded-lg">
+        class="w-full h-48 object-cover">
     </div>
 
-    <!-- ================= STATUS BAR ================= -->
-    <div class="mt-8 bg-gray-800 rounded-xl px-6 py-4">
+    <!-- Status Bar -->
+    <div class="mt-6 bg-gray-800 rounded-lg px-5 py-3">
       <div class="flex justify-between items-center">
-        <div class="flex items-center gap-3">
+        <div class="flex items-center gap-2">
           <div
-            class="w-3 h-3 rounded-full"
+            class="w-2.5 h-2.5 rounded-full"
             [class.bg-green-500]="connectService.connected"
             [class.bg-yellow-500]="connectService.initialized && !connectService.connected"
             [class.bg-gray-500]="!connectService.initialized">
@@ -202,10 +173,10 @@
           <span class="text-white text-sm">
             {{ connectService.connected
               ? 'Connected'
-              : (connectService.initialized ? 'Waiting for connection...' : 'Ready') }}
+              : (connectService.initialized ? 'Waiting for connection' : 'Ready') }}
           </span>
         </div>
-        <span class="text-gray-300 text-xs">Secure P2P Connection</span>
+        <span class="text-gray-400 text-xs">Secure P2P</span>
       </div>
     </div>
 

@@ -1,4 +1,3 @@
-// new add banner related to new version update
 import { Component, HostListener, OnInit } from '@angular/core';
 import { AlertController, ModalController } from '@ionic/angular';
 import { UntilDestroy } from '@ngneat/until-destroy';
@@ -62,21 +61,18 @@ export class HomePage implements OnInit {
     this.connectService.setId(id);
   }
 
-  // id copy function
   async copyMyId() {
-  const id = this.connectService.idArray.join('');
+    const id = this.connectService.idArray.join('');
+    await navigator.clipboard.writeText(id);
 
-  await navigator.clipboard.writeText(id);
+    const alert = await this.alertCtrl.create({
+      header: 'Copied',
+      message: 'ID copied to clipboard',
+      buttons: ['OK']
+    });
 
-  const alert = await this.alertCtrl.create({
-    header: 'Copied',
-    message: 'ID copied to clipboard',
-    buttons: ['OK']
-  });
-
-  await alert.present();
-}
-
+    await alert.present();
+  }
 
   async screenSelect(autoSelect = true, replaceVideo?: boolean) {
     const modal = await this.modalCtrl.create({
@@ -96,15 +92,23 @@ export class HomePage implements OnInit {
     await modal.present();
   }
 
-  onDigitInput(event: any) {
-    let element;
-    if (event.code !== 'Backspace') {
-      element = event.srcElement.nextElementSibling;
-    } else {
-      element = event.srcElement.previousElementSibling;
-      if (element) element.value = '';
+  onDigitInput(event: any, index: number) {
+    const value = event.target.value;
+    
+    if (event.code === 'Backspace') {
+      if (!value && index > 0) {
+        const prevInput = document.querySelectorAll('.digit-input')[index - 1] as HTMLInputElement;
+        if (prevInput) {
+          prevInput.focus();
+          prevInput.value = '';
+        }
+      }
+    } else if (value && index < 8) {
+      const nextInput = document.querySelectorAll('.digit-input')[index + 1] as HTMLInputElement;
+      if (nextInput) {
+        setTimeout(() => nextInput.focus(), 10);
+      }
     }
-    if (element) setTimeout(() => element.focus(), 10);
   }
 
   async disconnect() {
@@ -149,7 +153,6 @@ export class HomePage implements OnInit {
 
     await this.addressBookService.add({ id });
     
-    // ⭐ Add delay to ensure cleanup
     console.log('[HOME] Starting new connection to:', id);
     await new Promise(resolve => setTimeout(resolve, 300));
     
