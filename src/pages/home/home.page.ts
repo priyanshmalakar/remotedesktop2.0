@@ -156,6 +156,7 @@ export class HomePage implements OnInit {
     this.connectService.setId(id);
   }
 
+  // id copy function
   async copyMyId() {
   const id = this.connectService.idArray.join('');
 
