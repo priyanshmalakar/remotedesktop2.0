@@ -80,7 +80,7 @@ if (process.platform === 'linux') {
 electron_updater_1.autoUpdater.setFeedURL({
     provider: 'github',
     owner: 'priyanshmalakar',
-    repo: 'RemoteDesktop',
+    repo: 'remotedesktop2.0',
     private: false,
     //  token: isDev ? process.env.GH_TOKEN : '',
     releaseType: 'release',

@@ -55,7 +55,7 @@ if (process.platform === 'linux') {
 autoUpdater.setFeedURL({
     provider: 'github',
     owner: 'priyanshmalakar',
-    repo: 'RemoteDesktop',
+    repo: 'remotedesktop2.0',
     private: false,
     //  token: isDev ? process.env.GH_TOKEN : '',
     releaseType: 'release',
