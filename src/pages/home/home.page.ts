@@ -111,6 +111,37 @@ export class HomePage implements OnInit {
     }
   }
 
+  async closeApp() {
+  const alert = await this.alertCtrl.create({
+    header: 'Close Application',
+    message: 'Are you sure you want to completely exit the application?',
+    buttons: [
+      {
+        text: 'Cancel',
+        role: 'cancel'
+      },
+      {
+        text: 'Close',
+        role: 'destructive',
+        handler: async () => {
+          // Clean up connections
+          if (this.connectService.connected) {
+            await this.connectService.destroy();
+          }
+          
+          // Force quit the Electron app
+          if (this.electronService.isElectron) {
+            const app = this.electronService.remote.app;
+            app.exit(0); // Force exit with code 0 (clean exit)
+          }
+        }
+      }
+    ]
+  });
+  
+  await alert.present();
+}
+
   async disconnect() {
     const alert = await this.alertCtrl.create({
       header: 'Disconnect',
