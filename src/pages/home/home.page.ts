@@ -157,5 +157,6 @@ export class HomePage implements OnInit {
     await new Promise(resolve => setTimeout(resolve, 300));
     
     this.connectService.connect(id);
+    
   }
 }
