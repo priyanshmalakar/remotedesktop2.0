@@ -776,7 +776,7 @@ async destroy() {
                     }));
                 } else {
                     win.loadURL('http://localhost:4200/#/remote?id=' + id);
-                    win.webContents.openDevTools();
+                    // win.webContents.openDevTools();
                 }
 
                 win.maximize();
