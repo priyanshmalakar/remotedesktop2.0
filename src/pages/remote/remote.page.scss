@@ -394,3 +394,20 @@ video {
     gap: 8px;
   }
 }
+
+.start-video-button {
+  position: fixed !important;
+  top: 50% !important;
+  left: 50% !important;
+  transform: translate(-50%, -50%) !important;
+  z-index: 200 !important;
+  --padding-start: 30px;
+  --padding-end: 30px;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.video-interface {
+  width: 100%;
+  height: 100%;
+}

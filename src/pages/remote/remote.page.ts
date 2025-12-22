@@ -135,6 +135,7 @@ export class RemotePage implements OnInit, OnDestroy {
     isDraggingHost = false;
     isDraggingLocal = false;
     dragOffset = { x: 0, y: 0 };
+    showVideoInterface = false;
 
     options: AnimationOptions | any = {
         path: '/assets/animations/lf30_editor_PsHnfk.json',
@@ -340,12 +341,28 @@ export class RemotePage implements OnInit, OnDestroy {
     }
 
     endCall() {
-        this.stopVideoCall();
-        if (this.peer2) {
-            this.peer2.destroy();
-        }
-        this.connected = false;
-    }
+    // Hide interface instead of destroying connection
+    this.showVideoInterface = false;
+    
+    // Stop local video/audio
+    this.stopVideoCall();
+    
+    this.cdr.detectChanges();
+}
+
+startVideoInterface() {
+    this.showVideoInterface = true;
+    this.startVideoCall();
+    this.cdr.detectChanges();
+}
+
+    // endCall() {
+    //     this.stopVideoCall();
+    //     if (this.peer2) {
+    //         this.peer2.destroy();
+    //     }
+    //     this.connected = false;
+    // }
 
     constructor(
         private socketService: SocketService,
