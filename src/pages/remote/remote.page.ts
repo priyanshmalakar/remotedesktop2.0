@@ -340,20 +340,43 @@ export class RemotePage implements OnInit, OnDestroy {
         });
     }
 
-    endCall() {
-         this.showVideoInterface = false;
-        // this.stopVideoCall();
-        // if (this.peer2) {
-        //     this.peer2.destroy();
-        // }
-        // this.connected = false;
-    }
-
-    startVideoInterface() {
-    this.showVideoInterface = true;
+   endCall() {
+    this.showVideoInterface = false;
     
+    // Stop local video/audio tracks
+    if (this.localStream) {
+        this.localStream.getVideoTracks().forEach(track => {
+            track.enabled = false;
+        });
+        this.localStream.getAudioTracks().forEach(track => {
+            track.enabled = false;
+        });
+    }
+    
+    // Reset states
+    this.isMuted = true;
+    this.videoOn = false;
+    
+    this.cdr.detectChanges();
 }
 
+ startVideoInterface() {
+    this.showVideoInterface = true;
+    
+    // Enable video and audio when starting
+    if (this.localStream) {
+        this.localStream.getVideoTracks().forEach(track => {
+            track.enabled = true;
+        });
+        this.localStream.getAudioTracks().forEach(track => {
+            track.enabled = true;
+        });
+        this.videoOn = true;
+        this.isMuted = false;
+    }
+    
+    this.cdr.detectChanges();
+}
     constructor(
         private socketService: SocketService,
         private elementRef: ElementRef,
