@@ -136,7 +136,7 @@
     <!-- Layer 100: HOST's camera PiP (top-left corner, blue border) -->
     <div
         class="pip-container host-pip"
-        [class.hidden]="!connected"
+        [class.hidden]="!connected || !showVideoInterface"
         [class.minimized]="hostCameraMinimized"
         [class.fullscreen]="hostCameraFullscreen"
         [style.left.px]="hostCameraFullscreen ? 0 : hostCameraPosition.x"
