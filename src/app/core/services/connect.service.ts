@@ -215,9 +215,6 @@ export class ConnectService {
             remoteVideo
                 .play()
                 .catch(e => console.error('[CONNECT] Play error:', e));
-                if (this.hostCameraEnabled) {
-  remoteVideo.style.display = 'block';
-}
         });
 
         this.peer1.on('data', async data => {
@@ -1020,16 +1017,19 @@ export class ConnectService {
             hostCameraBtn?.addEventListener('click', async () => {
                 await this.toggleHostCamera();
                 const localVideo = document.getElementById('localUserVideo');
+                const remoteVideo = document.getElementById('remoteUserVideo');
 
                 if (this.hostCameraEnabled) {
                     hostCameraBtn.style.background =
                         'linear-gradient(135deg, #06b6d4, #0891b2)';
                     hostCameraBtn.style.transform = 'scale(1.05)';
                     if (localVideo) localVideo.style.display = 'block';
+                    if (remoteVideo) remoteVideo.style.display = 'block';
                 } else {
                     hostCameraBtn.style.background = '#374151';
                     hostCameraBtn.style.transform = 'scale(1)';
                     if (localVideo) localVideo.style.display = 'none';
+                    if (remoteVideo) remoteVideo.style.display = 'none';
                 }
             });
 
