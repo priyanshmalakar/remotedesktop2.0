@@ -92,7 +92,6 @@
     no-bounce
     has-bouncing="false"
     forceOverscroll="false">
-    
     <div
         class="progress"
         *ngIf="fileProgress != 0 && fileProgress != 100">
@@ -102,7 +101,7 @@
             {{getFileProgress(fileProgress)}}%
         </div>
     </div>
-    
+
     <div
         *ngIf="fileLoading"
         class="fileLoading"
@@ -110,182 +109,200 @@
         <ion-spinner [color]="'light'"></ion-spinner>
     </div>
 
-   <video
-    id="videobg"
-    class="video-background"
-    autoplay
-    muted
-    playsinline></video>
-
-<!-- Layer 1: Main DISPLAY video - HOST's screen (VISIBLE with audio) -->
-<video
-    #remoteVideo
-    id="remoteVideo"
-    class="main-screen-video"
-    autoplay
-    playsinline></video>
-
-<!-- Layer 2: CONTROL video - Invisible overlay for mouse/keyboard events -->
-<video
-    id="video"
-    class="control-video"
-    autoplay
-    muted
-    playsinline
-    [style.cursor]="cursor ? 'default' : 'none'"></video>
-
-<!-- Layer 100: HOST's camera PiP (top-left corner, blue border) -->
-<div 
-    class="pip-container host-pip"
-    [class.hidden]="!connected"
-    [class.minimized]="hostCameraMinimized"
-    [class.fullscreen]="hostCameraFullscreen"
-    [style.left.px]="hostCameraFullscreen ? 0 : hostCameraPosition.x"
-    [style.top.px]="hostCameraFullscreen ? 0 : hostCameraPosition.y">
-    
-    <div class="pip-header" (mousedown)="startDragHost($event)">
-        <span class="pip-label">
-            <ion-icon name="videocam"></ion-icon>
-            Host Camera
-        </span>
-        <div class="pip-controls" (mousedown)="$event.stopPropagation()">
-            <!-- Minimize/Restore button -->
-            <ion-button 
-                fill="clear" 
-                size="small"
-                [tp]="hostCameraMinimized ? 'Restore' : 'Minimize'"
-                (click)="toggleHostCamera(); $event.stopPropagation()">
-                <ion-icon 
-                    [name]="hostCameraMinimized ? 'remove' : 'remove'"
-                    slot="icon-only"></ion-icon>
-            </ion-button>
-            
-            <!-- Fullscreen toggle button -->
-            <ion-button 
-                fill="clear" 
-                size="small"
-                [tp]="hostCameraFullscreen ? 'Exit Fullscreen' : 'Fullscreen'"
-                (click)="toggleHostFullscreen(); $event.stopPropagation()">
-                <ion-icon 
-                    [name]="hostCameraFullscreen ? 'contract' : 'expand'"
-                    slot="icon-only"></ion-icon>
-            </ion-button>
-            
-            <!-- Close button -->
-            <ion-button 
-                fill="clear" 
-                size="small"
-                tp="Close"
-                (click)="closeHostCamera(); $event.stopPropagation()">
-                <ion-icon 
-                    name="close"
-                    slot="icon-only"></ion-icon>
-            </ion-button>
-        </div>
-    </div>
-    
     <video
-        [style.display]="hostCameraMinimized ? 'none' : 'block'"
-        #hostCameraVideo
-        id="hostCameraVideo"
-        class="pip-video"
+        id="videobg"
+        class="video-background"
         autoplay
-        playsinline
-        muted></video>
-</div>
+        muted
+        playsinline></video>
 
-
-<!-- Layer 100: YOUR camera PiP (bottom-left corner, green border) -->
-<div 
-    class="pip-container local-pip"
-    [class.hidden]="!connected || !localStream"
-    [class.minimized]="localCameraMinimized"
-    [class.fullscreen]="localCameraFullscreen"
-    [style.left.px]="localCameraFullscreen ? 0 : localCameraPosition.x"
-    [style.top.px]="localCameraFullscreen ? 0 : localCameraPosition.y">
-    
-    <div class="pip-header" (mousedown)="startDragLocal($event)">
-        <span class="pip-label">
-            <ion-icon name="person-circle"></ion-icon>
-            Your Camera
-        </span>
-        <div class="pip-controls" (mousedown)="$event.stopPropagation()">
-            <!-- Minimize/Restore button -->
-            <ion-button 
-                fill="clear" 
-                size="small"
-                [tp]="localCameraMinimized ? 'Restore' : 'Minimize'"
-                (click)="toggleLocalCamera(); $event.stopPropagation()">
-                <ion-icon 
-                    [name]="localCameraMinimized ? 'remove' : 'remove'"
-                    slot="icon-only"></ion-icon>
-            </ion-button>
-            
-            <!-- Fullscreen toggle button -->
-            <ion-button 
-                fill="clear" 
-                size="small"
-                [tp]="localCameraFullscreen ? 'Exit Fullscreen' : 'Fullscreen'"
-                (click)="toggleLocalFullscreen(); $event.stopPropagation()">
-                <ion-icon 
-                    [name]="localCameraFullscreen ? 'contract' : 'expand'"
-                    slot="icon-only"></ion-icon>
-            </ion-button>
-            
-            <!-- Close button -->
-            <ion-button 
-                fill="clear" 
-                size="small"
-                tp="Close"
-                (click)="closeLocalCamera(); $event.stopPropagation()">
-                <ion-icon 
-                    name="close"
-                    slot="icon-only"></ion-icon>
-            </ion-button>
-        </div>
-    </div>
-    
+    <!-- Layer 1: Main DISPLAY video - HOST's screen (VISIBLE with audio) -->
     <video
-       [style.display]="localCameraMinimized ? 'none' : 'block'"
-        #localVideo
-        id="localVideo"
-        class="pip-video"
+        #remoteVideo
+        id="remoteVideo"
+        class="main-screen-video"
         autoplay
+        playsinline></video>
+
+    <!-- Layer 2: CONTROL video - Invisible overlay for mouse/keyboard events -->
+    <video
+        id="video"
+        class="control-video"
+        autoplay
+        muted
         playsinline
-        muted></video>
-</div>
+        [style.cursor]="cursor ? 'default' : 'none'"></video>
+
+    <!-- Layer 100: HOST's camera PiP (top-left corner, blue border) -->
+    <div
+        class="pip-container host-pip"
+        [class.hidden]="!connected"
+        [class.minimized]="hostCameraMinimized"
+        [class.fullscreen]="hostCameraFullscreen"
+        [style.left.px]="hostCameraFullscreen ? 0 : hostCameraPosition.x"
+        [style.top.px]="hostCameraFullscreen ? 0 : hostCameraPosition.y">
+        <div
+            class="pip-header"
+            (mousedown)="startDragHost($event)">
+            <span class="pip-label">
+                <ion-icon name="videocam"></ion-icon>
+                Host Camera
+            </span>
+            <div
+                class="pip-controls"
+                (mousedown)="$event.stopPropagation()">
+                <!-- Minimize/Restore button -->
+                <ion-button
+                    fill="clear"
+                    size="small"
+                    [tp]="hostCameraMinimized ? 'Restore' : 'Minimize'"
+                    (click)="toggleHostCamera(); $event.stopPropagation()">
+                    <ion-icon
+                        [name]="hostCameraMinimized ? 'remove' : 'remove'"
+                        slot="icon-only"></ion-icon>
+                </ion-button>
+
+                <!-- Fullscreen toggle button -->
+                <ion-button
+                    fill="clear"
+                    size="small"
+                    [tp]="hostCameraFullscreen ? 'Exit Fullscreen' : 'Fullscreen'"
+                    (click)="toggleHostFullscreen(); $event.stopPropagation()">
+                    <ion-icon
+                        [name]="hostCameraFullscreen ? 'contract' : 'expand'"
+                        slot="icon-only"></ion-icon>
+                </ion-button>
+
+                <!-- Close button -->
+                <ion-button
+                    fill="clear"
+                    size="small"
+                    tp="Close"
+                    (click)="closeHostCamera(); $event.stopPropagation()">
+                    <ion-icon
+                        name="close"
+                        slot="icon-only"></ion-icon>
+                </ion-button>
+            </div>
+        </div>
+
+        <video
+            [style.display]="hostCameraMinimized ? 'none' : 'block'"
+            #hostCameraVideo
+            id="hostCameraVideo"
+            class="pip-video"
+            autoplay
+            playsinline
+            muted></video>
+    </div>
+
+    <!-- Layer 100: YOUR camera PiP (bottom-left corner, green border) -->
+    <div
+        class="pip-container local-pip"
+        [class.hidden]="!connected || !localStream"
+        [class.minimized]="localCameraMinimized"
+        [class.fullscreen]="localCameraFullscreen"
+        [style.left.px]="localCameraFullscreen ? 0 : localCameraPosition.x"
+        [style.top.px]="localCameraFullscreen ? 0 : localCameraPosition.y">
+        <div
+            class="pip-header"
+            (mousedown)="startDragLocal($event)">
+            <span class="pip-label">
+                <ion-icon name="person-circle"></ion-icon>
+                Your Camera
+            </span>
+            <div
+                class="pip-controls"
+                (mousedown)="$event.stopPropagation()">
+                <!-- Minimize/Restore button -->
+                <ion-button
+                    fill="clear"
+                    size="small"
+                    [tp]="localCameraMinimized ? 'Restore' : 'Minimize'"
+                    (click)="toggleLocalCamera(); $event.stopPropagation()">
+                    <ion-icon
+                        [name]="localCameraMinimized ? 'remove' : 'remove'"
+                        slot="icon-only"></ion-icon>
+                </ion-button>
+
+                <!-- Fullscreen toggle button -->
+                <ion-button
+                    fill="clear"
+                    size="small"
+                    [tp]="localCameraFullscreen ? 'Exit Fullscreen' : 'Fullscreen'"
+                    (click)="toggleLocalFullscreen(); $event.stopPropagation()">
+                    <ion-icon
+                        [name]="localCameraFullscreen ? 'contract' : 'expand'"
+                        slot="icon-only"></ion-icon>
+                </ion-button>
+
+                <!-- Close button -->
+                <ion-button
+                    fill="clear"
+                    size="small"
+                    tp="Close"
+                    (click)="closeLocalCamera(); $event.stopPropagation()">
+                    <ion-icon
+                        name="close"
+                        slot="icon-only"></ion-icon>
+                </ion-button>
+            </div>
+        </div>
+
+        <video
+            [style.display]="localCameraMinimized ? 'none' : 'block'"
+            #localVideo
+            id="localVideo"
+            class="pip-video"
+            autoplay
+            playsinline
+            muted></video>
+    </div>
+
+    <ion-button
+        *ngIf="connected && !showVideoInterface"
+        class="start-video-button"
+        (click)="startVideoInterface()"
+        size="large"
+        color="primary"
+        shape="round">
+        <ion-icon
+            name="videocam"
+            slot="start"></ion-icon>
+        Start Video Call
+    </ion-button>
     <!-- Quick controls (bottom center) -->
-   <div 
-    *ngIf="connected" 
-    class="video-controls">
-    <ion-button 
-        (click)="toggleAudio()"
-        [color]="isMuted ? 'danger' : 'primary'"
-        size="large"
-        shape="round">
-        <ion-icon 
-            [name]="isMuted ? 'mic-off' : 'mic'"
-            slot="icon-only"></ion-icon>
-    </ion-button>
-    
-    <ion-button 
-        (click)="toggleVideo()"
-        [color]="!videoOn ? 'danger' : 'primary'"
-        size="large"
-        shape="round">
-        <ion-icon 
-            [name]="videoOn ? 'videocam' : 'videocam-off'"
-            slot="icon-only"></ion-icon>
-    </ion-button>
-    
-    <ion-button 
-        (click)="endCall()"
-        color="danger"
-        size="large"
-        shape="round">
-        <ion-icon 
-            name="call"
-            slot="icon-only"></ion-icon>
-    </ion-button>
-</div>
+    <div
+        *ngIf="connected && showVideoInterface"
+        class="video-controls">
+        <ion-button
+            (click)="toggleAudio()"
+            [color]="isMuted ? 'danger' : 'primary'"
+            size="large"
+            shape="round">
+            <ion-icon
+                [name]="isMuted ? 'mic-off' : 'mic'"
+                slot="icon-only"></ion-icon>
+        </ion-button>
+
+        <ion-button
+            (click)="toggleVideo()"
+            [color]="!videoOn ? 'danger' : 'primary'"
+            size="large"
+            shape="round">
+            <ion-icon
+                [name]="videoOn ? 'videocam' : 'videocam-off'"
+                slot="icon-only"></ion-icon>
+        </ion-button>
+
+        <ion-button
+            (click)="endCall()"
+            color="danger"
+            size="large"
+            shape="round">
+            <ion-icon
+                name="call"
+                slot="icon-only"></ion-icon>
+        </ion-button>
+    </div>
 </ion-content>
