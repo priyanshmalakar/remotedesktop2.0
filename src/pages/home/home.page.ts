@@ -37,30 +37,39 @@ export class HomePage implements OnInit {
     });
   }
 
+  // ==============================
+  // LOAD BANNER 2
+  // ==============================
   loadBanner2() {
     this.adsService.getAds().subscribe({
       next: (ads: any[]) => {
         if (!Array.isArray(ads)) return;
         this.banner2 =
           ads.find(ad => ad.title === 'banner2' && ad.isActive) || null;
-      }
+      },
+      error: err => console.error('Banner2 API error:', err)
     });
   }
 
+  // ==============================
+  // OPEN AD LINK (FIXED)
+  // ==============================
   openBannerLink(banner: any) {
-    if (banner?.redirectLink) {
+    if (!banner?.redirectLink) return;
+
+    // ✅ Electron → open in default browser
+    if (this.electronService.isElectron && (window as any).require) {
+      const { shell } = (window as any).require('electron');
+      shell.openExternal(banner.redirectLink);
+    } else {
+      // ✅ Web
       window.open(banner.redirectLink, '_blank');
     }
   }
 
-  @HostListener('document:paste', ['$event'])
-  onPaste(event: ClipboardEvent) {
-    const id = (event.clipboardData?.getData('text') || '')
-      .trim()
-      .replace(/(\r\n|\n|\r)/gm, '');
-    this.connectService.setId(id);
-  }
-
+  // ==============================
+  // COPY MY ID
+  // ==============================
   async copyMyId() {
     const id = this.connectService.idArray.join('');
     await navigator.clipboard.writeText(id);
@@ -74,6 +83,9 @@ export class HomePage implements OnInit {
     await alert.present();
   }
 
+  // ==============================
+  // SCREEN SELECT
+  // ==============================
   async screenSelect(autoSelect = true, replaceVideo?: boolean) {
     const modal = await this.modalCtrl.create({
       component: ScreenSelectComponent,
@@ -92,9 +104,12 @@ export class HomePage implements OnInit {
     await modal.present();
   }
 
+  // ==============================
+  // DIGIT INPUT HANDLING
+  // ==============================
   onDigitInput(event: any, index: number) {
     const value = event.target.value;
-    
+
     if (event.code === 'Backspace') {
       if (!value && index > 0) {
         const prevInput = document.querySelectorAll('.digit-input')[index - 1] as HTMLInputElement;
@@ -111,53 +126,20 @@ export class HomePage implements OnInit {
     }
   }
 
-  async closeApp() {
-  const alert = await this.alertCtrl.create({
-    header: 'Close Application',
-    message: 'Are you sure you want to completely exit the application?',
-    buttons: [
-      {
-        text: 'Cancel',
-        role: 'cancel'
-      },
-      {
-        text: 'Close',
-        role: 'destructive',
-        handler: async () => {
-          // Clean up connections
-          if (this.connectService.connected) {
-            await this.connectService.destroy();
-          }
-          
-          // Force quit the Electron app
-          if (this.electronService.isElectron) {
-            const app = this.electronService.remote.app;
-            app.exit(0); // Force exit with code 0 (clean exit)
-          }
-        }
-      }
-    ]
-  });
-  
-  await alert.present();
-}
-
-  async disconnect() {
-    const alert = await this.alertCtrl.create({
-      header: 'Disconnect',
-      message: 'Are you sure you want to disconnect?',
-      buttons: [
-        { text: 'Cancel', role: 'cancel' },
-        {
-          text: 'Disconnect',
-          role: 'destructive',
-          handler: () => this.connectService.reconnect()
-        }
-      ]
-    });
-    await alert.present();
+  // ==============================
+  // PASTE ID
+  // ==============================
+  @HostListener('document:paste', ['$event'])
+  onPaste(event: ClipboardEvent) {
+    const id = (event.clipboardData?.getData('text') || '')
+      .trim()
+      .replace(/(\r\n|\n|\r)/gm, '');
+    this.connectService.setId(id);
   }
 
+  // ==============================
+  // CONNECT
+  // ==============================
   async connect() {
     if (this.connectService.connected) {
       const alert = await this.alertCtrl.create({
@@ -183,11 +165,29 @@ export class HomePage implements OnInit {
     }
 
     await this.addressBookService.add({ id });
-    
+
     console.log('[HOME] Starting new connection to:', id);
     await new Promise(resolve => setTimeout(resolve, 300));
-    
+
     this.connectService.connect(id);
-    
+  }
+
+  // ==============================
+  // DISCONNECT
+  // ==============================
+  async disconnect() {
+    const alert = await this.alertCtrl.create({
+      header: 'Disconnect',
+      message: 'Are you sure you want to disconnect?',
+      buttons: [
+        { text: 'Cancel', role: 'cancel' },
+        {
+          text: 'Disconnect',
+          role: 'destructive',
+          handler: () => this.connectService.reconnect()
+        }
+      ]
+    });
+    await alert.present();
   }
 }

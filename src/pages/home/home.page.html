@@ -5,15 +5,19 @@
         <ion-menu-button class="text-blue-900"></ion-menu-button>
       </ion-buttons>
 
-      <ion-title class="!text-blue-900 !font-bold !text-xl">
-        <div class="flex items-center gap-2">
-          <img
-            src="/assets/Only_ProtoMart.png"
-            alt="Logo"
-            class="h-7 w-auto object-contain" />
-          <span>RemoteControl</span>
-        </div>
-      </ion-title>
+      <ion-title class="!text-blue-900 !font-bold">
+  <div class="flex items-center gap-3">
+    <img
+      src="/assets/Gemini_Generated_Image_l3.png"
+      alt="RemoteControl Logo"
+      class="h-8 w-8 object-contain" />
+
+    <span class="text-lg md:text-xl font-bold leading-none">
+      ProtoMart Easy Access
+    </span>
+  </div>
+</ion-title>
+
 
       <ion-buttons slot="end" class="mr-3">
         <ion-spinner
@@ -141,24 +145,33 @@
     </div>
 
     <!-- Banner Section -->
-    <div
-      *ngIf="banner2"
-      class="bg-white rounded-lg border border-gray-300 overflow-hidden
-             cursor-pointer hover:border-blue-400 transition"
-      (click)="openBannerLink(banner2)">
+<div *ngIf="banner2"
+     class="bg-white rounded-lg border border-gray-300 overflow-hidden
+            cursor-pointer hover:border-blue-400 transition"
+     (click)="openBannerLink(banner2)">
 
-      <video
-        *ngIf="banner2.videoUrl"
-        [src]="banner2.videoUrl"
-        autoplay muted loop
-        class="w-full h-48 object-cover">
-      </video>
+  <!-- Sponsored Label -->
+  <div class="px-3 py-1 text-xs font-semibold text-gray-500 bg-gray-100">
+    Sponsored Ad
+  </div>
 
-      <img
-        *ngIf="banner2.image && !banner2.videoUrl"
-        [src]="banner2.image"
-        class="w-full h-48 object-cover">
-    </div>
+  <!-- VIDEO -->
+  <video *ngIf="banner2.videoUrl"
+         [src]="banner2.videoUrl"
+         autoplay
+         muted
+         loop
+         playsinline
+         class="w-full max-h-[260px] object-contain mx-auto block pointer-events-none">
+  </video>
+
+  <!-- IMAGE -->
+  <img *ngIf="banner2.image && !banner2.videoUrl"
+       [src]="banner2.image"
+       alt="Sponsored Ad"
+       class="w-full max-h-[260px] object-contain mx-auto block pointer-events-none">
+</div>
+
 
     <!-- Status Bar -->
     <div class="mt-6 bg-gray-800 rounded-lg px-5 py-3">
