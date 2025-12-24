@@ -366,8 +366,6 @@ export class ConnectService {
                     );
 
                     const constraints: any = { video: true };
-                    // IMPORTANT: If mic was already enabled separately, we need to request it again
-                    // because we're creating a brand new stream
                     if (this.hostMicEnabled) {
                         constraints.audio = true;
                     }
@@ -400,12 +398,16 @@ export class ConnectService {
                     alert('Failed to access camera: ' + err.message);
                 }
             } else {
-                // Re-enable existing video track (if it exists)
+                // Re-enable existing video track
                 console.log('[CONNECT] ✅ Re-enabling existing video track');
                 const videoTracks = this.cameraStream.getVideoTracks();
                 if (videoTracks.length > 0) {
                     videoTracks.forEach(track => {
                         track.enabled = true;
+                        // ⭐ RE-ADD TRACK TO PEER
+                        if (this.peer1) {
+                            this.peer1.addTrack(track, this.cameraStream!);
+                        }
                         console.log(
                             '[CONNECT] ✅ Re-enabled video track:',
                             track.label
@@ -416,18 +418,29 @@ export class ConnectService {
                     console.warn(
                         '[CONNECT] ⚠️ No video track exists, getting new stream...'
                     );
-                    this.hostCameraEnabled = false; // Reset state
+                    this.hostCameraEnabled = false;
                     this.cameraStream = null;
-                    await this.toggleHostCamera(); // Recursively call to get new stream
+                    await this.toggleHostCamera();
                     return;
                 }
             }
         } else {
-            // Disable video track (don't stop it)
-            if (this.cameraStream) {
-                console.log('[CONNECT] 🚫 Disabling video track');
+            // ⭐ REMOVE track from peer, then disable it
+            if (this.cameraStream && this.peer1) {
+                console.log('[CONNECT] 🚫 Removing video track from peer');
                 const videoTracks = this.cameraStream.getVideoTracks();
-                videoTracks.forEach(track => (track.enabled = false));
+                videoTracks.forEach(track => {
+                    // Find and remove the sender
+                    const senders = this.peer1.getSenders();
+                    const videoSender = senders.find(s => s.track === track);
+                    if (videoSender) {
+                        this.peer1.removeTrack(videoSender);
+                        console.log(
+                            '[CONNECT] ✅ Removed video track from peer'
+                        );
+                    }
+                    track.enabled = false;
+                });
             }
         }
     }
@@ -448,13 +461,13 @@ export class ConnectService {
                     );
 
                     const constraints: any = { audio: true };
-                    // IMPORTANT: If camera was already enabled separately, request it too
                     if (this.hostCameraEnabled) {
                         constraints.video = true;
                     }
 
                     this.cameraStream =
                         await navigator.mediaDevices.getUserMedia(constraints);
+
                     // Add tracks to peer
                     if (this.peer1 && this.cameraStream) {
                         this.cameraStream.getTracks().forEach(track => {
@@ -473,11 +486,15 @@ export class ConnectService {
                     this.hostMicEnabled = false;
                 }
             } else {
-                // Re-enable existing audio track (if it exists)
+                // Re-enable existing audio track
                 const audioTracks = this.cameraStream.getAudioTracks();
                 if (audioTracks.length > 0) {
                     audioTracks.forEach(track => {
                         track.enabled = true;
+                        // ⭐ RE-ADD TRACK TO PEER
+                        if (this.peer1) {
+                            this.peer1.addTrack(track, this.cameraStream!);
+                        }
                         console.log(
                             '[CONNECT] ✅ Re-enabled audio track:',
                             track.label
@@ -488,17 +505,29 @@ export class ConnectService {
                     console.warn(
                         '[CONNECT] ⚠️ No audio track exists, getting new stream...'
                     );
-                    this.hostMicEnabled = false; // Reset state
+                    this.hostMicEnabled = false;
                     this.cameraStream = null;
-                    await this.toggleHostMic(); // Recursively call to get new stream
+                    await this.toggleHostMic();
                     return;
                 }
             }
         } else {
-            // Disable audio track
-            if (this.cameraStream) {
+            // ⭐ REMOVE track from peer, then disable it
+            if (this.cameraStream && this.peer1) {
+                console.log('[CONNECT] 🚫 Removing audio track from peer');
                 const audioTracks = this.cameraStream.getAudioTracks();
-                audioTracks.forEach(track => (track.enabled = false));
+                audioTracks.forEach(track => {
+                    // Find and remove the sender
+                    const senders = this.peer1.getSenders();
+                    const audioSender = senders.find(s => s.track === track);
+                    if (audioSender) {
+                        this.peer1.removeTrack(audioSender);
+                        console.log(
+                            '[CONNECT] ✅ Removed audio track from peer'
+                        );
+                    }
+                    track.enabled = false;
+                });
             }
         }
     }
