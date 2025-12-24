@@ -152,7 +152,6 @@
 //   }
 // }
 
-
 import { AfterViewInit, Component } from '@angular/core';
 import { ModalController } from '@ionic/angular';
 import { AppConfig } from '../environments/environment';
@@ -162,7 +161,6 @@ import { ConnectService } from './core/services/connect.service';
 import { SettingsService } from './core/services/settings.service';
 import { ScreenSelectComponent } from './shared/components/screen-select/screen-select.component';
 import { TranslateService } from '@ngx-translate/core';
-import { AdsService } from './core/services/ads.service';
 
 @Component({
   selector: 'app-root',
@@ -171,21 +169,28 @@ import { AdsService } from './core/services/ads.service';
 })
 export class AppComponent implements AfterViewInit {
 
+  // ==============================
+  // ELECTRON SAFE ACCESS
+  // ==============================
   platform = (window as any)?.process ?? null;
   process = (window as any)?.process ?? null;
   version = '##version##';
 
+  // ==============================
+  // SIDE MENU
+  // ==============================
   appPages = [
     { title: 'Home', url: '/home', icon: 'code-working-outline' },
     { title: 'Address book', url: '/address-book', icon: 'book-outline' },
   ];
 
+  // ==============================
+  // FLAGS
+  // ==============================
   initDone = false;
   isRemote = false;
   isInfoWindow = false;
-
-  banner1: any = null;
-  banner2: any = null;
+  private screenModalOpen = false;
 
   constructor(
     public electronService: ElectronService,
@@ -193,68 +198,50 @@ export class AppComponent implements AfterViewInit {
     private modalCtrl: ModalController,
     private connectService: ConnectService,
     private settingsService: SettingsService,
-    private translateService: TranslateService,
-    private adsService: AdsService
+    private translateService: TranslateService
   ) {
     console.log('AppConfig', AppConfig);
   }
 
+  // ==============================
+  // AFTER VIEW INIT
+  // ==============================
   async ngAfterViewInit() {
-    this.loadBanners();
 
-    if (this.electronService.isElectron) {
-      this.appPages.push({
-        title: this.translateService.instant('Settings'),
-        url: '/settings',
-        icon: 'cog-outline',
-      });
+    if (!this.electronService.isElectron) return;
 
-      await this.settingsService.load();
-
-      if (window.location.href.includes('id=')) {
-        this.isRemote = true;
-      } else if (window.location.href.includes('info-window')) {
-        this.isRemote = true;
-        this.isInfoWindow = true;
-      } else {
-        this.screenSelect();
-      }
-    }
-  }
-
-  // ==============================
-  // LOAD ADS
-  // ==============================
-  loadBanners() {
-    this.adsService.getAds().subscribe({
-      next: (ads: any[]) => {
-        if (!Array.isArray(ads)) return;
-        const activeAds = ads.filter(ad => ad.isActive);
-        this.banner1 = activeAds.find(ad => ad.title === 'banner1') || null;
-        this.banner2 = activeAds.find(ad => ad.title === 'banner2') || null;
-      },
-      error: (err) => console.error('Ads API error:', err)
+    // Add settings page only in Electron
+    this.appPages.push({
+      title: this.translateService.instant('Settings'),
+      url: '/settings',
+      icon: 'cog-outline',
     });
-  }
 
-  // ==============================
-  // OPEN AD IN DEFAULT BROWSER
-  // ==============================
-  openBannerLink(banner: any) {
-    if (!banner?.redirectLink) return;
+    await this.settingsService.load();
 
-    // ✅ Electron → default browser
-    if (this.electronService.isElectron && (window as any).require) {
-      const { shell } = (window as any).require('electron');
-      shell.openExternal(banner.redirectLink);
+    const url = window.location.href;
+
+    if (url.includes('id=')) {
+      this.isRemote = true;
+    } else if (url.includes('info-window')) {
+      this.isRemote = true;
+      this.isInfoWindow = true;
     } else {
-      // ✅ Web
-      window.open(banner.redirectLink, '_blank');
+      this.screenSelect();
     }
   }
 
+  // ==============================
+  // SCREEN SELECT (SAFE)
+  // ==============================
   async screenSelect(autoSelect = true, replaceVideo?: boolean) {
-    if (!autoSelect) this.initDone = false;
+    if (this.screenModalOpen) return;
+
+    this.screenModalOpen = true;
+
+    if (!autoSelect) {
+      this.initDone = false;
+    }
 
     const modal = await this.modalCtrl.create({
       component: ScreenSelectComponent,
@@ -263,12 +250,16 @@ export class AppComponent implements AfterViewInit {
     });
 
     modal.onDidDismiss().then(data => {
-      if (data?.data) {
-        if (replaceVideo) {
-          this.connectService.replaceVideo(data.data.stream);
-        } else {
-          this.connectService.videoSource = data.data;
-          if (!this.initDone) this.init();
+      this.screenModalOpen = false;
+
+      if (!data?.data) return;
+
+      if (replaceVideo) {
+        this.connectService.replaceVideo(data.data.stream);
+      } else {
+        this.connectService.videoSource = data.data;
+        if (!this.initDone) {
+          this.init();
         }
       }
     });
@@ -276,9 +267,15 @@ export class AppComponent implements AfterViewInit {
     await modal.present();
   }
 
+  // ==============================
+  // INIT CONNECTION
+  // ==============================
   async init() {
+    if (this.initDone) return;
     this.initDone = true;
     await this.connectService.init();
   }
 }
+
+
 

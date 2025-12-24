@@ -12,6 +12,7 @@ import { SettingsService } from './settings.service';
 import { SocketService } from './socket.service';
 import { keyboard } from '@nut-tree-fork/nut-js';
 
+
 @Injectable({
     providedIn: 'root',
 })
@@ -1071,6 +1072,7 @@ export class ConnectService {
             );
         }
     }
+
 
     // ========================= CHAT FUNCTIONS =============================
 

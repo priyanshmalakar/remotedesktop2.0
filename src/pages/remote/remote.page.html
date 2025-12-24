@@ -74,11 +74,12 @@
                 <ion-checkbox [(ngModel)]="cursor"></ion-checkbox>
             </ion-button>
 
-            <ion-button
-                (click)="fileInput.click()"
-                [tp]="'Send file'|translate">
-                <ion-icon name="document-outline"></ion-icon>
-            </ion-button>
+            <!-- Add file transfer name -->
+            <ion-button (click)="fileInput.click()" [tp]="'Send file' | translate">
+  <ion-icon name="document-outline" slot="start"></ion-icon>
+  File Transfer
+</ion-button>
+
             <ion-button
                 (click)="close()"
                 [tp]="'Close connection'|translate">
@@ -90,7 +91,7 @@
 
 <ion-content
     no-bounce
-    has-bouncing="false"
+    has-bouncing="false"s
     forceOverscroll="false">
     <div
         class="progress"
