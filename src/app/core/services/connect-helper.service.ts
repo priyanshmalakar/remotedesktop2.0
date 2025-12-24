@@ -2,7 +2,6 @@ import { Injectable } from '@angular/core';
 import { ElectronService } from './electron.service';
 import { AppConfig } from '../../../environments/environment';
 import { keyboard, Key, mouse, Button } from '@nut-tree-fork/nut-js';
-
 declare var window: any;
 
 @Injectable({
@@ -10,8 +9,12 @@ declare var window: any;
 })
 export class ConnectHelperService {
   infoWindow: any;
+   hostMouseBlocked = false;
 
-  constructor(private electronService: ElectronService) {}
+constructor(
+    private electronService: ElectronService,
+   
+) {}
 
   // ⭐ ALL SPECIAL KEYS MAPPED FOR REMOTE CONTROL
   private specialKeysMap: Record<string, Key> = {
@@ -71,6 +74,10 @@ export class ConnectHelperService {
   // Mouse handler
   handleMouse(text: string) {
     try {
+    if (this.hostMouseBlocked) {
+        console.log('[HELPER] 🚫 Host mouse is blocked by remote user');
+        return;
+    }
       const [t, x, y, bStr] = text.split(',');
       const b = +bStr || 0;
 
