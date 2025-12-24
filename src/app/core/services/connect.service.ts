@@ -349,188 +349,158 @@ export class ConnectService {
             return null;
         }
     }
-    async toggleHostCamera() {
-        this.hostCameraEnabled = !this.hostCameraEnabled;
-        console.log(
-            '[CONNECT] 📹 Host camera:',
-            this.hostCameraEnabled ? 'ON' : 'OFF'
-        );
+   async toggleHostCamera() {
+    this.hostCameraEnabled = !this.hostCameraEnabled;
+    console.log(
+        '[CONNECT] 📹 Host camera:',
+        this.hostCameraEnabled ? 'ON' : 'OFF'
+    );
 
-        if (this.hostCameraEnabled) {
-            // Start camera for first time OR re-enable track
-            if (!this.cameraStream) {
-                // Need to get stream for first time
-                try {
-                    console.log(
-                        '[CONNECT] 🎥 Requesting camera (with mic if already enabled)'
-                    );
+    if (this.hostCameraEnabled) {
+        // Start camera for first time OR re-enable track
+        if (!this.cameraStream) {
+            // Need to get stream for first time
+            try {
+                console.log(
+                    '[CONNECT] 🎥 Requesting camera (with mic if already enabled)'
+                );
 
-                    const constraints: any = { video: true };
-                    if (this.hostMicEnabled) {
-                        constraints.audio = true;
-                    }
-
-                    this.cameraStream =
-                        await navigator.mediaDevices.getUserMedia(constraints);
-
-                    console.log('[CONNECT] ✅ Got camera stream:', {
-                        video: this.cameraStream.getVideoTracks().length,
-                        audio: this.cameraStream.getAudioTracks().length,
-                    });
-
-                    // Add tracks to peer
-                    if (this.peer1 && this.cameraStream) {
-                        this.cameraStream.getTracks().forEach(track => {
-                            console.log(
-                                '[CONNECT] 📤 Adding track to peer:',
-                                track.kind,
-                                track.label
-                            );
-                            this.peer1.addTrack(track, this.cameraStream!);
-                        });
-                    }
-
-                    // Show preview
-                    this.showLocalVideoPreview();
-                } catch (err) {
-                    console.error('[CONNECT] ❌ Failed to get camera:', err);
-                    this.hostCameraEnabled = false;
-                    alert('Failed to access camera: ' + err.message);
+                const constraints: any = { video: true };
+                if (this.hostMicEnabled) {
+                    constraints.audio = true;
                 }
-            } else {
-                // Re-enable existing video track
-                console.log('[CONNECT] ✅ Re-enabling existing video track');
-                const videoTracks = this.cameraStream.getVideoTracks();
-                if (videoTracks.length > 0) {
-                    videoTracks.forEach(track => {
-                        track.enabled = true;
-                        // ⭐ RE-ADD TRACK TO PEER
-                        if (this.peer1) {
-                            this.peer1.addTrack(track, this.cameraStream!);
-                        }
+
+                this.cameraStream =
+                    await navigator.mediaDevices.getUserMedia(constraints);
+
+                console.log('[CONNECT] ✅ Got camera stream:', {
+                    video: this.cameraStream.getVideoTracks().length,
+                    audio: this.cameraStream.getAudioTracks().length,
+                });
+
+                // Add tracks to peer
+                if (this.peer1 && this.cameraStream) {
+                    this.cameraStream.getTracks().forEach(track => {
                         console.log(
-                            '[CONNECT] ✅ Re-enabled video track:',
+                            '[CONNECT] 📤 Adding track to peer:',
+                            track.kind,
                             track.label
                         );
+                        this.peer1.addTrack(track, this.cameraStream!);
                     });
-                } else {
-                    // Video track doesn't exist in stream, need to get new stream
-                    console.warn(
-                        '[CONNECT] ⚠️ No video track exists, getting new stream...'
-                    );
-                    this.hostCameraEnabled = false;
-                    this.cameraStream = null;
-                    await this.toggleHostCamera();
-                    return;
                 }
+
+                // Show preview
+                this.showLocalVideoPreview();
+            } catch (err) {
+                console.error('[CONNECT] ❌ Failed to get camera:', err);
+                this.hostCameraEnabled = false;
+                alert('Failed to access camera: ' + err.message);
             }
         } else {
-            // ⭐ REMOVE track from peer, then disable it
-            if (this.cameraStream && this.peer1) {
-                console.log('[CONNECT] 🚫 Removing video track from peer');
-                const videoTracks = this.cameraStream.getVideoTracks();
+            // Re-enable existing video track
+            console.log('[CONNECT] ✅ Re-enabling existing video track');
+            const videoTracks = this.cameraStream.getVideoTracks();
+            if (videoTracks.length > 0) {
                 videoTracks.forEach(track => {
-                    // Find and remove the sender
-                    const senders = this.peer1.getSenders();
-                    const videoSender = senders.find(s => s.track === track);
-                    if (videoSender) {
-                        this.peer1.removeTrack(videoSender);
-                        console.log(
-                            '[CONNECT] ✅ Removed video track from peer'
-                        );
-                    }
-                    track.enabled = false;
+                    track.enabled = true;
+                    console.log(
+                        '[CONNECT] ✅ Re-enabled video track:',
+                        track.label
+                    );
                 });
+            } else {
+                // Video track doesn't exist in stream, need to get new stream
+                console.warn(
+                    '[CONNECT] ⚠️ No video track exists, getting new stream...'
+                );
+                this.hostCameraEnabled = false;
+                this.cameraStream = null;
+                await this.toggleHostCamera();
+                return;
             }
         }
+    } else {
+        // Disable video track (mute it)
+        if (this.cameraStream) {
+            console.log('[CONNECT] 🚫 Disabling video track');
+            const videoTracks = this.cameraStream.getVideoTracks();
+            videoTracks.forEach(track => (track.enabled = false));
+        }
     }
-    async toggleHostMic() {
-        this.hostMicEnabled = !this.hostMicEnabled;
-        console.log(
-            '[CONNECT] 🎤 Host mic:',
-            this.hostMicEnabled ? 'ON' : 'OFF'
-        );
+}
+   async toggleHostMic() {
+    this.hostMicEnabled = !this.hostMicEnabled;
+    console.log(
+        '[CONNECT] 🎤 Host mic:',
+        this.hostMicEnabled ? 'ON' : 'OFF'
+    );
 
-        if (this.hostMicEnabled) {
-            // Start mic for first time OR re-enable track
-            if (!this.cameraStream) {
-                // Need to get stream for first time
-                try {
-                    console.log(
-                        '[CONNECT] 🎤 Requesting mic (with camera if already enabled)'
-                    );
+    if (this.hostMicEnabled) {
+        // Start mic for first time OR re-enable track
+        if (!this.cameraStream) {
+            // Need to get stream for first time
+            try {
+                console.log(
+                    '[CONNECT] 🎤 Requesting mic (with camera if already enabled)'
+                );
 
-                    const constraints: any = { audio: true };
-                    if (this.hostCameraEnabled) {
-                        constraints.video = true;
-                    }
-
-                    this.cameraStream =
-                        await navigator.mediaDevices.getUserMedia(constraints);
-
-                    // Add tracks to peer
-                    if (this.peer1 && this.cameraStream) {
-                        this.cameraStream.getTracks().forEach(track => {
-                            console.log(
-                                '[CONNECT] 📤 Adding track:',
-                                track.kind
-                            );
-                            this.peer1.addTrack(track, this.cameraStream!);
-                        });
-                    }
-
-                    // Show preview
-                    this.showLocalVideoPreview();
-                } catch (err) {
-                    console.error('[CONNECT] ❌ Failed to get mic:', err);
-                    this.hostMicEnabled = false;
+                const constraints: any = { audio: true };
+                if (this.hostCameraEnabled) {
+                    constraints.video = true;
                 }
-            } else {
-                // Re-enable existing audio track
-                const audioTracks = this.cameraStream.getAudioTracks();
-                if (audioTracks.length > 0) {
-                    audioTracks.forEach(track => {
-                        track.enabled = true;
-                        // ⭐ RE-ADD TRACK TO PEER
-                        if (this.peer1) {
-                            this.peer1.addTrack(track, this.cameraStream!);
-                        }
+
+                this.cameraStream =
+                    await navigator.mediaDevices.getUserMedia(constraints);
+                    
+                // Add tracks to peer
+                if (this.peer1 && this.cameraStream) {
+                    this.cameraStream.getTracks().forEach(track => {
                         console.log(
-                            '[CONNECT] ✅ Re-enabled audio track:',
-                            track.label
+                            '[CONNECT] 📤 Adding track:',
+                            track.kind
                         );
+                        this.peer1.addTrack(track, this.cameraStream!);
                     });
-                } else {
-                    // Audio track doesn't exist in stream, need to get new stream
-                    console.warn(
-                        '[CONNECT] ⚠️ No audio track exists, getting new stream...'
-                    );
-                    this.hostMicEnabled = false;
-                    this.cameraStream = null;
-                    await this.toggleHostMic();
-                    return;
                 }
+
+                // Show preview
+                this.showLocalVideoPreview();
+            } catch (err) {
+                console.error('[CONNECT] ❌ Failed to get mic:', err);
+                this.hostMicEnabled = false;
             }
         } else {
-            // ⭐ REMOVE track from peer, then disable it
-            if (this.cameraStream && this.peer1) {
-                console.log('[CONNECT] 🚫 Removing audio track from peer');
-                const audioTracks = this.cameraStream.getAudioTracks();
+            // Re-enable existing audio track
+            const audioTracks = this.cameraStream.getAudioTracks();
+            if (audioTracks.length > 0) {
                 audioTracks.forEach(track => {
-                    // Find and remove the sender
-                    const senders = this.peer1.getSenders();
-                    const audioSender = senders.find(s => s.track === track);
-                    if (audioSender) {
-                        this.peer1.removeTrack(audioSender);
-                        console.log(
-                            '[CONNECT] ✅ Removed audio track from peer'
-                        );
-                    }
-                    track.enabled = false;
+                    track.enabled = true;
+                    console.log(
+                        '[CONNECT] ✅ Re-enabled audio track:',
+                        track.label
+                    );
                 });
+            } else {
+                // Audio track doesn't exist in stream, need to get new stream
+                console.warn(
+                    '[CONNECT] ⚠️ No audio track exists, getting new stream...'
+                );
+                this.hostMicEnabled = false;
+                this.cameraStream = null;
+                await this.toggleHostMic();
+                return;
             }
         }
+    } else {
+        // Disable audio track (mute it)
+        if (this.cameraStream) {
+            console.log('[CONNECT] 🚫 Disabling audio track');
+            const audioTracks = this.cameraStream.getAudioTracks();
+            audioTracks.forEach(track => (track.enabled = false));
+        }
     }
+}
 
     private showLocalVideoPreview() {
         if (!this.cameraStream) {
