@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { ElectronService } from './electron.service';
 import { AppConfig } from '../../../environments/environment';
 import { keyboard, Key, mouse, Button } from '@nut-tree-fork/nut-js';
+
 declare var window: any;
 
 @Injectable({
@@ -9,12 +10,11 @@ declare var window: any;
 })
 export class ConnectHelperService {
   infoWindow: any;
-   hostMouseBlocked = false;
+  hostMouseBlocked = false; // ⭐ ADD THIS
+  private mouseBlockInterval: any = null; // ⭐ ADD THIS
+  private lastKnownPosition = { x: 0, y: 0 }; // ⭐ ADD THIS
 
-constructor(
-    private electronService: ElectronService,
-   
-) {}
+  constructor(private electronService: ElectronService) {}
 
   // ⭐ ALL SPECIAL KEYS MAPPED FOR REMOTE CONTROL
   private specialKeysMap: Record<string, Key> = {
@@ -71,13 +71,59 @@ constructor(
     }
   }
 
+  // ⭐ NEW METHOD - Blocks host's physical mouse
+  async startBlockingHostMouse() {
+    if (!this.electronService.isElectron) return;
+    
+    this.hostMouseBlocked = true;
+    console.log('[HELPER] 🔒 Starting mouse block...');
+
+    try {
+      // Save current position
+      const pos = await mouse.getPosition();
+      this.lastKnownPosition = { x: pos.x, y: pos.y };
+
+      // Block mouse by constantly resetting position
+      this.mouseBlockInterval = setInterval(async () => {
+        if (this.hostMouseBlocked) {
+          try {
+            const currentPos = await mouse.getPosition();
+            
+            // If host tries to move mouse, snap it back
+            if (
+              Math.abs(currentPos.x - this.lastKnownPosition.x) > 5 ||
+              Math.abs(currentPos.y - this.lastKnownPosition.y) > 5
+            ) {
+              await mouse.setPosition(this.lastKnownPosition);
+              console.log('[HELPER] 🚫 Host tried to move mouse - blocked!');
+            }
+          } catch (err) {
+            // Ignore errors during blocking
+          }
+        }
+      }, 50); // Check every 50ms (faster = more responsive)
+      
+      console.log('[HELPER] ✅ Mouse blocking active');
+    } catch (err) {
+      console.error('[HELPER] ❌ Failed to block mouse:', err);
+      this.hostMouseBlocked = false;
+    }
+  }
+
+  // ⭐ NEW METHOD - Unblocks host's mouse
+  stopBlockingHostMouse() {
+    this.hostMouseBlocked = false;
+    
+    if (this.mouseBlockInterval) {
+      clearInterval(this.mouseBlockInterval);
+      this.mouseBlockInterval = null;
+      console.log('[HELPER] ✅ Mouse unblocked');
+    }
+  }
+
   // Mouse handler
   handleMouse(text: string) {
     try {
-    if (this.hostMouseBlocked) {
-        console.log('[HELPER] 🚫 Host mouse is blocked by remote user');
-        return;
-    }
       const [t, x, y, bStr] = text.split(',');
       const b = +bStr || 0;
 
@@ -90,6 +136,10 @@ constructor(
           break;
         case 'mm':
           mouse.setPosition({ x: +x, y: +y });
+          // ⭐ UPDATE last known position when REMOTE moves mouse
+          if (this.hostMouseBlocked) {
+            this.lastKnownPosition = { x: +x, y: +y };
+          }
           break;
         case 'dc':
           mouse.click(Button.LEFT);
@@ -206,5 +256,3 @@ constructor(
     }
   }
 }
-
-
