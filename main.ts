@@ -26,6 +26,8 @@ import * as url from 'url';
 
 require('@electron/remote/main').initialize();
 
+autoUpdater.autoInstallOnAppQuit = false;
+autoUpdater.allowDowngrade = false;
 
 
 ipcMain.handle('DESKTOP_CAPTURER_GET_SOURCES', (event, opts) =>
@@ -34,8 +36,29 @@ ipcMain.handle('DESKTOP_CAPTURER_GET_SOURCES', (event, opts) =>
 
 ipcMain.handle('CHECK_FOR_UPDATES', async () => {
     try {
+        console.log('Manual update check triggered');
         const result = await autoUpdater.checkForUpdates();
-        return { success: true, updateInfo: result?.updateInfo };
+        console.log('Check for updates result:', result);
+        return { 
+            success: true, 
+            updateInfo: result?.updateInfo,
+            currentVersion: app.getVersion()
+        };
+    } catch (error) {
+        console.error('Update check error:', error);
+        return { 
+            success: false, 
+            error: error.message || String(error),
+            currentVersion: app.getVersion()
+        };
+    }
+});
+
+
+ipcMain.handle('DOWNLOAD_UPDATE', async () => {
+    try {
+        await autoUpdater.downloadUpdate();
+        return { success: true };
     } catch (error) {
         return { success: false, error: error.message };
     }
@@ -52,40 +75,61 @@ if (process.platform === 'linux') {
     type = 'linux';
 }
 
+
 autoUpdater.setFeedURL({
     provider: 'github',
     owner: 'priyanshmalakar',
     repo: 'remotedesktop2.0',
     private: false,
-    //  token: isDev ? process.env.GH_TOKEN : '',
     releaseType: 'release',
 });
 autoUpdater.autoDownload = true;
+autoUpdater.autoInstallOnAppQuit = true;
+process.env.ELECTRON_UPDATER_ALLOW_UNSIGNED = 'true';
+
+autoUpdater.on('checking-for-update', () => {
+    console.log('Checking for update...');
+    win?.webContents.send('update-checking');
+});
+
+autoUpdater.on('update-available', (info) => {
+    console.log('Update available:', info);
+    win?.webContents.send('update-available', info);
+});
+
+autoUpdater.on('update-not-available', (info) => {
+    console.log('Update not available:', info);
+    win?.webContents.send('update-not-available', info);
+});
+
+autoUpdater.on('error', (err) => {
+    console.error('Update error:', err);
+    win?.webContents.send('update-error', err);
+});
 
 
-
-autoUpdater.on('download-progress', progressObj => {
+autoUpdater.on('download-progress', (progressObj) => {
     let log_message = 'Download speed: ' + progressObj.bytesPerSecond;
     log_message = log_message + ' - Downloaded ' + progressObj.percent + '%';
-    log_message =
-        log_message +
-        ' (' +
-        progressObj.transferred +
-        '/' +
-        progressObj.total +
-        ')';
+    log_message = log_message + ' (' + progressObj.transferred + '/' + progressObj.total + ')';
+    console.log(log_message);
+    win?.webContents.send('update-download-progress', progressObj);
 });
-autoUpdater.on('update-downloaded', event => {
+
+autoUpdater.on('update-downloaded', (info) => {
+    console.log('Update downloaded:', info);
     const dialogOpts: MessageBoxOptions = {
         type: 'info',
-        buttons: ['Neustart', 'Später'],
-        title: 'Anwendungsaktualisierung',
-        message: 'releaseNotes',
-        detail: 'Eine neue Version wurde heruntergeladen. Starten Sie die Anwendung neu, um die Updates anzuwenden.',
+        buttons: ['Restart', 'Later'],
+        title: 'Application Update',
+        message: 'New version downloaded',
+        detail: 'A new version has been downloaded. Restart the application to apply the updates.',
     };
 
     dialog.showMessageBox(dialogOpts).then(returnValue => {
-        if (returnValue.response === 0) autoUpdater.quitAndInstall();
+        if (returnValue.response === 0) {
+            autoUpdater.quitAndInstall();
+        }
     });
 });
 
