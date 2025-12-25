@@ -7,6 +7,7 @@ import {
     OnDestroy,
     OnInit,
     ViewChild,
+    AfterViewInit
 } from '@angular/core';
 import { Router } from '@angular/router';
 import { ActivatedRoute } from '@angular/router';
@@ -98,7 +99,7 @@ export class PwDialog {
         fadeOutUpOnLeaveAnimation({ duration: 150 }),
     ],
 })
-export class RemotePage implements OnInit, OnDestroy {
+export class RemotePage implements OnInit, OnDestroy,AfterViewInit  {
     @ViewChild('localVideo') localVideoRef: ElementRef<HTMLVideoElement>;
     @ViewChild('remoteVideo') remoteVideoRef: ElementRef<HTMLVideoElement>;
     @ViewChild('hostCameraVideo')
@@ -1082,6 +1083,81 @@ toggleHostMouseDisable() {
 
     await alert.present();
 }
+
+ngAfterViewInit() {
+    // Listen for window close event
+    if (this.electronService.isElectron) {
+        const currentWindow = this.electronService.remote.getCurrentWindow();
+        
+        currentWindow.on('close', (e) => {
+            if (this.connected) {
+                // If connected, prevent close and restart instead
+                e.preventDefault();
+                this.handleWindowClose();
+            }
+            // If not connected, allow normal close (do nothing)
+        });
+    }
+}
+
+private async handleWindowClose() {
+    console.log('[REMOTE] 🔄 Window close requested while connected, showing alert...');
+    
+    const alert = await this.alertCtrl.create({
+        header: 'Close Connection',
+        message: 'Do you want to disconnect and return to home?',
+        buttons: [
+            {
+                text: 'Cancel',
+                role: 'cancel',
+            },
+            {
+                text: 'Disconnect',
+                handler: () => {
+                    this.cleanupAndRestart();
+                },
+            },
+        ],
+    });
+    
+    await alert.present();
+}
+private async cleanupAndRestart() {
+    console.log('[REMOTE] 🧹 Cleaning up connection...');
+    
+    // Stop connection
+    this.connected = false;
+    this.removeEventListeners();
+    this.stopVideoCall();
+    
+    // Clean up peer
+    try {
+        if (this.peer2) {
+            this.peer2.removeAllListeners();
+            this.peer2.destroy();
+            this.peer2 = null;
+        }
+    } catch (err) {
+        console.error('[REMOTE] Peer cleanup error:', err);
+    }
+    
+    // Clean up socket
+    try {
+        if (this.socketService) {
+            this.socketService.destroy();
+        }
+    } catch (err) {
+        console.error('[REMOTE] Socket cleanup error:', err);
+    }
+    
+    // Restart app
+    if (this.electronService.isElectron) {
+        this.electronService.restart();
+    } else {
+        this.router.navigate(['/home']);
+    }
+}
+
 
     // ⭐ NEW METHOD - Add this right after close()
     private navigateToHome() {
