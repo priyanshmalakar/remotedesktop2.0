@@ -170,6 +170,7 @@ async function createWindow(): Promise<Electron.BrowserWindow> {
     });
 
     require('@electron/remote/main').enable(win.webContents);
+    win.maximize();
     /*const isMac = process.platform === 'darwin';
   const template = [
     { id: '1', label: 'one' },

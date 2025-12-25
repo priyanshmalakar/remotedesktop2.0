@@ -190,6 +190,7 @@ function createWindow() {
                 },
             });
             require('@electron/remote/main').enable(win.webContents);
+            win.maximize();
             iconPath = path.join(__dirname, 'data/icon-no-bg-small.png');
             tray = new electron_1.Tray(electron_1.nativeImage.createFromPath(iconPath));
             contextMenu = electron_1.Menu.buildFromTemplate([
