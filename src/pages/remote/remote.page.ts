@@ -1091,29 +1091,32 @@ ngAfterViewInit() {
         
         currentWindow.on('close', (e) => {
             if (this.connected) {
-                // If connected, prevent close and restart instead
+                // If connected, prevent close and show alert
                 e.preventDefault();
                 this.handleWindowClose();
             }
             // If not connected, allow normal close (do nothing)
         });
     }
-}
-
-private async handleWindowClose() {
-    console.log('[REMOTE] 🔄 Window close requested while connected, showing alert...');
+}private async handleWindowClose() {
+    console.log('[REMOTE] 🔄 Window close requested, showing options...');
     
     const alert = await this.alertCtrl.create({
-        header: 'Close Connection',
-        message: 'Do you want to disconnect and return to home?',
+        header: 'Close Window',
+        message: 'What would you like to do?',
         buttons: [
             {
-                text: 'Cancel',
-                role: 'cancel',
+                text: 'Exit App',
+                role: 'destructive',
+                handler: () => {
+                    console.log('[REMOTE] 🚪 User chose to exit app');
+                    this.cleanupAndExit();
+                },
             },
             {
-                text: 'Disconnect',
+                text: 'Continue',
                 handler: () => {
+                    console.log('[REMOTE] 🔄 User chose to continue (restart)');
                     this.cleanupAndRestart();
                 },
             },
@@ -1121,9 +1124,45 @@ private async handleWindowClose() {
     });
     
     await alert.present();
+}private async cleanupAndExit() {
+    console.log('[REMOTE] 🧹 Cleaning up and exiting...');
+    
+    // Stop connection
+    this.connected = false;
+    this.removeEventListeners();
+    this.stopVideoCall();
+    
+    // Clean up peer
+    try {
+        if (this.peer2) {
+            this.peer2.removeAllListeners();
+            this.peer2.destroy();
+            this.peer2 = null;
+        }
+    } catch (err) {
+        console.error('[REMOTE] Peer cleanup error:', err);
+    }
+    
+    // Clean up socket
+    try {
+        if (this.socketService) {
+            this.socketService.destroy();
+        }
+    } catch (err) {
+        console.error('[REMOTE] Socket cleanup error:', err);
+    }
+    
+    // Close the app
+    if (this.electronService.isElectron) {
+        const currentWindow = this.electronService.remote.getCurrentWindow();
+        currentWindow.destroy(); // Force close without triggering close event again
+        this.electronService.remote.app.quit();
+    }
 }
+
+
 private async cleanupAndRestart() {
-    console.log('[REMOTE] 🧹 Cleaning up connection...');
+    console.log('[REMOTE] 🧹 Cleaning up and restarting...');
     
     // Stop connection
     this.connected = false;
