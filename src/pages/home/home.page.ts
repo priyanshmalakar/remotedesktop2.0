@@ -195,8 +195,7 @@ export class HomePage implements OnInit, OnDestroy {
 
   // ==============================
   // DISCONNECT
-  // ==============================
-  async disconnect(): Promise<void> {
+async disconnect(): Promise<void> {
     const alert = await this.alertCtrl.create({
       header: 'Disconnect',
       message: 'Are you sure you want to disconnect?',
@@ -205,11 +204,16 @@ export class HomePage implements OnInit, OnDestroy {
         {
           text: 'Disconnect',
           role: 'destructive',
-          handler: () => this.connectService.reconnect(),
+          handler: async () => {
+            await this.connectService.reconnect();
+            if (this.electronService.isElectron) {
+              setTimeout(() => this.electronService.restart(), 500);
+            }
+          },
         },
       ],
     });
 
     await alert.present();
-  }
+}
 }

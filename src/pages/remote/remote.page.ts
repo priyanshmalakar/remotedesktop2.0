@@ -1066,14 +1066,18 @@ toggleHostMouseDisable() {
     const alert = await this.alertCtrl.create({
         header: 'Connection Ended',
         message: 'Connection to the host has ended.',
-        buttons: [
-            {
-                text: 'OK',
-                handler: () => {
+         buttons: [
+        {
+            text: 'OK',
+            handler: () => {
+                if (this.electronService.isElectron) {
+                    this.electronService.restart();
+                } else {
                     this.navigateToHome();
-                },
+                }
             },
-        ],
+        },
+    ],
     });
 
     await alert.present();
