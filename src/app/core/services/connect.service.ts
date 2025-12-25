@@ -746,12 +746,24 @@ export class ConnectService {
         this.idArray = savedIdArray;
 
         // 6. Show alert
-        const alert = await this.alertCtrl.create({
-            header: 'Connection Ended',
-            message:
-                'The remote connection has been closed. You can accept new connections with the same ID.',
-            buttons: ['OK'],
-        });
+      const alert = await this.alertCtrl.create({
+    header: 'Connection Ended',
+    message:
+        'The remote connection has been closed. You can accept new connections with the same ID.',
+    buttons: [
+        {
+            text: 'OK',
+            handler: () => {
+                if (this.electronService.isElectron) {
+                    this.electronService.restart();
+                } else {
+                    // Browser fallback - just navigate
+                    this.router.navigate(['/home']);
+                }
+            },
+        },
+    ],
+});
         await alert.present();
 
         // 7. Navigate to home
