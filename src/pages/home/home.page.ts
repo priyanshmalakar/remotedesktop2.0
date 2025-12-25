@@ -65,15 +65,9 @@ export class HomePage implements OnInit, OnDestroy {
   // OPEN AD LINK (ELECTRON SAFE)
   // ==============================
   openBannerLink(banner: any): void {
-    if (!banner?.redirectLink) return;
-
-    if (this.electronService.isElectron && (window as any).require) {
-      const { shell } = (window as any).require('electron');
-      shell.openExternal(banner.redirectLink);
-    } else {
-      window.open(banner.redirectLink, '_blank', 'noopener,noreferrer');
-    }
-  }
+  if (!banner?.redirectLink) return;
+  this.electronService.openExternal(banner.redirectLink);
+}
 
   // ==============================
   // COPY MY ID
