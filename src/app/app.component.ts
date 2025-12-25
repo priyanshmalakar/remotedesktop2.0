@@ -38,8 +38,6 @@ export class AppComponent implements AfterViewInit {
   // ==============================
   // BANNERS
   // ==============================
-  banner1: any = null;
-  banner2: any = null;
 
   banner1: any = null;
 banner2: any = null;
@@ -88,29 +86,7 @@ banner2: any = null;
   }
 
 
-  loadBanners() {
-  this.adsService.getAds().subscribe({ 
-    next: (ads: any[]) => {
-      if (!Array.isArray(ads)) return;
-
-      const activeAds = ads.filter(ad => ad.isActive);
-
-      this.banner1 = activeAds.find(ad => ad.title === 'banner1') || null;
-      this.banner2 = activeAds.find(ad => ad.title === 'banner2') || null;
-
-      console.log('Banner1:', this.banner1);
-      console.log('Banner2:', this.banner2);
-    },
-    error: (err) => {
-      console.error('Ads API error:', err);
-    }
-  });
-}
-
-openBannerLink(banner: any) {
-  if (!banner?.redirectLink) return;
-  window.open(banner.redirectLink, '_blank');
-}
+  
   // ==============================
   // FETCH ADS FROM BACKEND
   // ==============================
