@@ -161,6 +161,7 @@ import { ConnectService } from './core/services/connect.service';
 import { SettingsService } from './core/services/settings.service';
 import { ScreenSelectComponent } from './shared/components/screen-select/screen-select.component';
 import { TranslateService } from '@ngx-translate/core';
+import { AdsService } from './core/services/ads.service';
 
 @Component({
   selector: 'app-root',
@@ -192,13 +193,17 @@ export class AppComponent implements AfterViewInit {
   isInfoWindow = false;
   private screenModalOpen = false;
 
+  banner1: any = null;
+banner2: any = null;
+
   constructor(
     public electronService: ElectronService,
     public appService: AppService,
     private modalCtrl: ModalController,
     private connectService: ConnectService,
     private settingsService: SettingsService,
-    private translateService: TranslateService
+    private translateService: TranslateService,
+ private adsService: AdsService
   ) {
     console.log('AppConfig', AppConfig);
   }
@@ -207,6 +212,8 @@ export class AppComponent implements AfterViewInit {
   // AFTER VIEW INIT
   // ==============================
   async ngAfterViewInit() {
+    this.loadBanners();  
+
 
     if (!this.electronService.isElectron) return;
 
@@ -231,6 +238,30 @@ export class AppComponent implements AfterViewInit {
     }
   }
 
+
+  loadBanners() {
+  this.adsService.getAds().subscribe({ 
+    next: (ads: any[]) => {
+      if (!Array.isArray(ads)) return;
+
+      const activeAds = ads.filter(ad => ad.isActive);
+
+      this.banner1 = activeAds.find(ad => ad.title === 'banner1') || null;
+      this.banner2 = activeAds.find(ad => ad.title === 'banner2') || null;
+
+      console.log('Banner1:', this.banner1);
+      console.log('Banner2:', this.banner2);
+    },
+    error: (err) => {
+      console.error('Ads API error:', err);
+    }
+  });
+}
+
+openBannerLink(banner: any) {
+  if (!banner?.redirectLink) return;
+  window.open(banner.redirectLink, '_blank');
+}
   // ==============================
   // SCREEN SELECT (SAFE)
   // ==============================

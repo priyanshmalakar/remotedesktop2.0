@@ -1,6 +1,6 @@
 {
     "name": "remotecontrol-desktop",
-    "version": "2.0.3",
+    "version": "2.0.6",
     "description": "",
     "homepage": "https://google.com",
     "browser": {
@@ -156,35 +156,37 @@
         "webpack-node-externals": "3.0.0",
         "zone.js": "~0.13.1"
     },
-    "build": {
-        "appId": "com.webzone.MyRemoteAppSetup",
-        "productName": "MyRemoteAppSetup",
-        "files": [
-            "dist/**/*",
-            "main.js",
-            "package.json",
-            "node_modules/**/*"
-        ],
-        "directories": {
-            "output": "release"
-        },
-        "win": {
-            "target": "nsis",
-            "publisherName": "priyanshmalakar",
-            "publish": [
-                "github"
-            ]
-        },
-        "mac": {
-            "target": "dmg"
-        },
-        "linux": {
-            "target": "AppImage"
-        },
-        "publish": {
-            "provider": "github",
-            "owner": "priyanshmalakar",
-            "repo": "remotedesktop2.0"
-        }
+   "build": {
+    "appId": "com.webzone.MyRemoteAppSetup",
+    "productName": "Protomart Easy Access",
+    "files": [
+        "dist/**/*",
+        "main.js",
+        "package.json",
+        "node_modules/**/*"
+    ],
+    "directories": {
+        "output": "release",
+        "buildResources": "build"
+    },
+    "win": {
+        "icon": "build/icon.ico",
+        "target": "nsis",
+        "publisherName": "priyanshmalakar",
+        "publish": ["github"]
+    },
+    "mac": {
+        "icon": "build/icon.icns",
+        "target": "dmg"
+    },
+    "linux": {
+        "icon": "build/icon.png",
+        "target": "AppImage"
+    },
+    "publish": {
+        "provider": "github",
+        "owner": "priyanshmalakar",
+        "repo": "remotedesktop2.0"
     }
+}
 }

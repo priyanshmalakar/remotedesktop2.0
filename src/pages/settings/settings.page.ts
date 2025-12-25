@@ -114,8 +114,9 @@ export class SettingsPage implements OnInit {
     compName = '';
     autoStartEnabled = false;
     autoLaunch;
-
     hiddenAccess = false;
+    updateChecking = false;
+    currentVersion = '';
 
     constructor(
         private electronService: ElectronService,
@@ -127,8 +128,7 @@ export class SettingsPage implements OnInit {
         public settingsService: SettingsService,
         public connectService: ConnectService
     ) {}
-
-    ngOnInit() {
+ngOnInit() {
         try {
             const loginSettings = this.electronService.app.getLoginItemSettings();
             this.autoStartEnabled = loginSettings?.executableWillLaunchAtLogin ?? false;
@@ -137,39 +137,104 @@ export class SettingsPage implements OnInit {
         }
         try {
             this.compName = this.electronService.os.hostname();
+            this.currentVersion = this.electronService.app.getVersion();
         } catch (err) {
             this.compName = '';
         }
+
+        // Listen for update events
+        this.setupUpdateListeners();
         this.cdr.detectChanges();
     }
 
-    async checkForUpdates() {
-    try {
-        const result = await this.electronService.ipcRenderer.invoke('CHECK_FOR_UPDATES');
-        
-        if (result.success) {
-            console.log('Update check successful:', result);
-            // Show success toast to user
-            const toast = await this.toastController.create({
-                message: 'Update check completed',
-                duration: 2000,
-                color: 'success'
-            });
-            await toast.present();
-        } else {
-            console.error('Update check failed:', result.error);
-            // Show error toast to user
-            const toast = await this.toastController.create({
-                message: 'Update check failed: ' + result.error,
-                duration: 3000,
-                color: 'danger'
-            });
-            await toast.present();
-        }
-    } catch (error) {
-        console.log('error', error);
+    setupUpdateListeners() {
+        if (!this.electronService.ipcRenderer) return;
+
+        this.electronService.ipcRenderer.on('update-checking', () => {
+            this.updateChecking = true;
+            this.showToast('Checking for updates...', 'primary');
+        });
+
+        this.electronService.ipcRenderer.on('update-available', (event, info) => {
+            this.updateChecking = false;
+            this.showToast(`Update available: ${info.version}`, 'success');
+            this.confirmDownload();
+        });
+
+        this.electronService.ipcRenderer.on('update-not-available', () => {
+            this.updateChecking = false;
+            this.showToast('You are on the latest version', 'success');
+        });
+
+        this.electronService.ipcRenderer.on('update-error', (event, err) => {
+            this.updateChecking = false;
+            this.showToast(`Update error: ${err.message}`, 'danger');
+        });
+
+        this.electronService.ipcRenderer.on('update-download-progress', (event, progress) => {
+            this.showToast(`Downloading: ${Math.round(progress.percent)}%`, 'primary', 1000);
+        });
     }
-}
+
+    async checkForUpdates() {
+        try {
+            this.updateChecking = true;
+            const result = await this.electronService.ipcRenderer.invoke('CHECK_FOR_UPDATES');
+            
+            console.log('Update check result:', result);
+            
+            if (result.success) {
+                // The event listeners will handle the UI updates
+                console.log('Current version:', result.currentVersion);
+            } else {
+                this.updateChecking = false;
+                await this.showToast('Update check failed: ' + result.error, 'danger');
+            }
+        } catch (error) {
+            this.updateChecking = false;
+            console.error('Update check error:', error);
+            await this.showToast('Update check failed', 'danger');
+        }
+    }
+
+    async confirmDownload() {
+        const actionSheet = await this.actionSheetCtrl.create({
+            header: 'Update Available',
+            buttons: [
+                {
+                    text: 'Download Now',
+                    icon: 'download',
+                    handler: () => {
+                        this.downloadUpdate();
+                    }
+                },
+                {
+                    text: 'Later',
+                    icon: 'close',
+                    role: 'cancel'
+                }
+            ]
+        });
+        await actionSheet.present();
+    }
+
+    async downloadUpdate() {
+        try {
+            await this.showToast('Starting download...', 'primary');
+            await this.electronService.ipcRenderer.invoke('DOWNLOAD_UPDATE');
+        } catch (error) {
+            await this.showToast('Download failed', 'danger');
+        }
+    }
+
+    async showToast(message: string, color: string = 'primary', duration: number = 3000) {
+        const toast = await this.toastController.create({
+            message,
+            duration,
+            color
+        });
+        await toast.present();
+    }
 
     public async selectLanguage(ev): Promise<any> {
         const actionSheetCtrl = await this.actionSheetCtrl.create({
@@ -208,12 +273,7 @@ export class SettingsPage implements OnInit {
         });
     }
 
-    async randomIdChange() {
-        await this.settingsService.saveSettings({
-            randomId: this.settingsService.settings.randomId,
-        });
-        this.connectService.reconnect();
-    }
+
 
     async addPw() {
         const modal = await this.modalCtrl.create({

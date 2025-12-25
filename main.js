@@ -47,6 +47,8 @@ var url = require("url");
 //     require('dotenv').config();
 // }
 require('@electron/remote/main').initialize();
+electron_updater_1.autoUpdater.autoInstallOnAppQuit = false;
+electron_updater_1.autoUpdater.allowDowngrade = false;
 electron_1.ipcMain.handle('DESKTOP_CAPTURER_GET_SOURCES', function (event, opts) {
     return electron_1.desktopCapturer.getSources(opts);
 });
@@ -56,13 +58,41 @@ electron_1.ipcMain.handle('CHECK_FOR_UPDATES', function () { return __awaiter(vo
         switch (_a.label) {
             case 0:
                 _a.trys.push([0, 2, , 3]);
+                console.log('Manual update check triggered');
                 return [4 /*yield*/, electron_updater_1.autoUpdater.checkForUpdates()];
             case 1:
                 result = _a.sent();
-                return [2 /*return*/, { success: true, updateInfo: result === null || result === void 0 ? void 0 : result.updateInfo }];
+                console.log('Check for updates result:', result);
+                return [2 /*return*/, {
+                        success: true,
+                        updateInfo: result === null || result === void 0 ? void 0 : result.updateInfo,
+                        currentVersion: electron_1.app.getVersion()
+                    }];
             case 2:
                 error_1 = _a.sent();
-                return [2 /*return*/, { success: false, error: error_1.message }];
+                console.error('Update check error:', error_1);
+                return [2 /*return*/, {
+                        success: false,
+                        error: error_1.message || String(error_1),
+                        currentVersion: electron_1.app.getVersion()
+                    }];
+            case 3: return [2 /*return*/];
+        }
+    });
+}); });
+electron_1.ipcMain.handle('DOWNLOAD_UPDATE', function () { return __awaiter(void 0, void 0, void 0, function () {
+    var error_2;
+    return __generator(this, function (_a) {
+        switch (_a.label) {
+            case 0:
+                _a.trys.push([0, 2, , 3]);
+                return [4 /*yield*/, electron_updater_1.autoUpdater.downloadUpdate()];
+            case 1:
+                _a.sent();
+                return [2 /*return*/, { success: true }];
+            case 2:
+                error_2 = _a.sent();
+                return [2 /*return*/, { success: false, error: error_2.message }];
             case 3: return [2 /*return*/];
         }
     });
@@ -82,32 +112,47 @@ electron_updater_1.autoUpdater.setFeedURL({
     owner: 'priyanshmalakar',
     repo: 'remotedesktop2.0',
     private: false,
-    //  token: isDev ? process.env.GH_TOKEN : '',
     releaseType: 'release',
 });
 electron_updater_1.autoUpdater.autoDownload = true;
+electron_updater_1.autoUpdater.autoInstallOnAppQuit = true;
+process.env.ELECTRON_UPDATER_ALLOW_UNSIGNED = 'true';
+electron_updater_1.autoUpdater.on('checking-for-update', function () {
+    console.log('Checking for update...');
+    win === null || win === void 0 ? void 0 : win.webContents.send('update-checking');
+});
+electron_updater_1.autoUpdater.on('update-available', function (info) {
+    console.log('Update available:', info);
+    win === null || win === void 0 ? void 0 : win.webContents.send('update-available', info);
+});
+electron_updater_1.autoUpdater.on('update-not-available', function (info) {
+    console.log('Update not available:', info);
+    win === null || win === void 0 ? void 0 : win.webContents.send('update-not-available', info);
+});
+electron_updater_1.autoUpdater.on('error', function (err) {
+    console.error('Update error:', err);
+    win === null || win === void 0 ? void 0 : win.webContents.send('update-error', err);
+});
 electron_updater_1.autoUpdater.on('download-progress', function (progressObj) {
     var log_message = 'Download speed: ' + progressObj.bytesPerSecond;
     log_message = log_message + ' - Downloaded ' + progressObj.percent + '%';
-    log_message =
-        log_message +
-            ' (' +
-            progressObj.transferred +
-            '/' +
-            progressObj.total +
-            ')';
+    log_message = log_message + ' (' + progressObj.transferred + '/' + progressObj.total + ')';
+    console.log(log_message);
+    win === null || win === void 0 ? void 0 : win.webContents.send('update-download-progress', progressObj);
 });
-electron_updater_1.autoUpdater.on('update-downloaded', function (event) {
+electron_updater_1.autoUpdater.on('update-downloaded', function (info) {
+    console.log('Update downloaded:', info);
     var dialogOpts = {
         type: 'info',
-        buttons: ['Neustart', 'Später'],
-        title: 'Anwendungsaktualisierung',
-        message: 'releaseNotes',
-        detail: 'Eine neue Version wurde heruntergeladen. Starten Sie die Anwendung neu, um die Updates anzuwenden.',
+        buttons: ['Restart', 'Later'],
+        title: 'Application Update',
+        message: 'New version downloaded',
+        detail: 'A new version has been downloaded. Restart the application to apply the updates.',
     };
     electron_1.dialog.showMessageBox(dialogOpts).then(function (returnValue) {
-        if (returnValue.response === 0)
+        if (returnValue.response === 0) {
             electron_updater_1.autoUpdater.quitAndInstall();
+        }
     });
 });
 var hidden, tray, serve;
