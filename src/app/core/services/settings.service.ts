@@ -8,7 +8,6 @@ import { encrypt, decrypt } from './storage.service';
 export class SettingsService {
     settings = {
         hiddenAccess: false,
-        randomId: true,
         passwordHash: '',
     };
 

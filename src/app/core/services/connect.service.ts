@@ -584,17 +584,15 @@ export class ConnectService {
         });
     }
 
-    async generateId() {
-        if (this.settingsService.settings?.randomId) {
-            this.id = `${this.connectHelperService.threeDigit()}${this.connectHelperService.threeDigit()}${this.connectHelperService.threeDigit()}`;
-        } else {
-            const nodeMachineId = this.electronService.nodeMachineId;
-            const id = await nodeMachineId.machineId();
-            const uniqId = parseInt(id, 36).toString().substring(3, 12);
-            this.id = uniqId;
-        }
-        this.idArray = ('' + this.id).split('');
-    }
+   async generateId() {
+    const nodeMachineId = this.electronService.nodeMachineId;
+    const id = await nodeMachineId.machineId();
+    const uniqId = parseInt(id, 36).toString().substring(3, 12);
+    this.id = uniqId;
+    this.idArray = ('' + this.id).split('');
+}
+
+
     async init() {
         if (this.initialized) {
             console.log('[CONNECT] ⚠️ Already initialized');
