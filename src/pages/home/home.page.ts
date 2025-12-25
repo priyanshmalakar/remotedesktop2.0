@@ -15,6 +15,7 @@ import { Subscription } from 'rxjs';
 export class HomePage implements OnInit, OnDestroy {
 
   banner2: any = null;
+  logo = 'assets/Logo.png';
 
   private adsSub?: Subscription;
   private screenModalOpen = false;
@@ -179,6 +180,24 @@ export class HomePage implements OnInit, OnDestroy {
     await this.addressBookService.add({ id });
     this.connectService.connect(id);
   }
+  async closeApp(): Promise<void> {
+  const alert = await this.alertCtrl.create({
+    header: 'Close Application',
+    message: 'Are you sure you want to exit?',
+    buttons: [
+      { text: 'Cancel', role: 'cancel' },
+      {
+        text: 'Close',
+        role: 'destructive',
+        handler: () => {
+          this.electronService.close();
+        },
+      },
+    ],
+  });
+
+  await alert.present();
+}
 
   // ==============================
   // DISCONNECT
