@@ -10,6 +10,9 @@ declare var window: any;
 })
 export class ConnectHelperService {
   infoWindow: any;
+  hostMouseBlocked = false; // ⭐ ADD THIS
+  private mouseBlockInterval: any = null; // ⭐ ADD THIS
+  private lastKnownPosition = { x: 0, y: 0 }; // ⭐ ADD THIS
 
   constructor(private electronService: ElectronService) {}
 
@@ -68,6 +71,56 @@ export class ConnectHelperService {
     }
   }
 
+  // ⭐ NEW METHOD - Blocks host's physical mouse
+  async startBlockingHostMouse() {
+    if (!this.electronService.isElectron) return;
+    
+    this.hostMouseBlocked = true;
+    console.log('[HELPER] 🔒 Starting mouse block...');
+
+    try {
+      // Save current position
+      const pos = await mouse.getPosition();
+      this.lastKnownPosition = { x: pos.x, y: pos.y };
+
+      // Block mouse by constantly resetting position
+      this.mouseBlockInterval = setInterval(async () => {
+        if (this.hostMouseBlocked) {
+          try {
+            const currentPos = await mouse.getPosition();
+            
+            // If host tries to move mouse, snap it back
+            if (
+              Math.abs(currentPos.x - this.lastKnownPosition.x) > 5 ||
+              Math.abs(currentPos.y - this.lastKnownPosition.y) > 5
+            ) {
+              await mouse.setPosition(this.lastKnownPosition);
+              console.log('[HELPER] 🚫 Host tried to move mouse - blocked!');
+            }
+          } catch (err) {
+            // Ignore errors during blocking
+          }
+        }
+      }, 50); // Check every 50ms (faster = more responsive)
+      
+      console.log('[HELPER] ✅ Mouse blocking active');
+    } catch (err) {
+      console.error('[HELPER] ❌ Failed to block mouse:', err);
+      this.hostMouseBlocked = false;
+    }
+  }
+
+  // ⭐ NEW METHOD - Unblocks host's mouse
+  stopBlockingHostMouse() {
+    this.hostMouseBlocked = false;
+    
+    if (this.mouseBlockInterval) {
+      clearInterval(this.mouseBlockInterval);
+      this.mouseBlockInterval = null;
+      console.log('[HELPER] ✅ Mouse unblocked');
+    }
+  }
+
   // Mouse handler
   handleMouse(text: string) {
     try {
@@ -83,6 +136,10 @@ export class ConnectHelperService {
           break;
         case 'mm':
           mouse.setPosition({ x: +x, y: +y });
+          // ⭐ UPDATE last known position when REMOTE moves mouse
+          if (this.hostMouseBlocked) {
+            this.lastKnownPosition = { x: +x, y: +y };
+          }
           break;
         case 'dc':
           mouse.click(Button.LEFT);
@@ -199,5 +256,3 @@ export class ConnectHelperService {
     }
   }
 }
-
-

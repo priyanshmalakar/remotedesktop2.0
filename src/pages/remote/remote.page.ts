@@ -136,6 +136,7 @@ export class RemotePage implements OnInit, OnDestroy {
     isDraggingLocal = false;
     dragOffset = { x: 0, y: 0 };
     showVideoInterface = false;
+    hostMouseDisabled = false;
 
     options: AnimationOptions | any = {
         path: '/assets/animations/lf30_editor_PsHnfk.json',
@@ -373,6 +374,17 @@ export class RemotePage implements OnInit, OnDestroy {
         });
         this.videoOn = true;
         this.isMuted = false;
+    }
+    
+    this.cdr.detectChanges();
+}
+toggleHostMouseDisable() {
+    this.hostMouseDisabled = !this.hostMouseDisabled;
+    
+    // Send command to host
+    if (this.peer2 && this.connected) {
+        this.peer2.send(`disable-host-mouse:${this.hostMouseDisabled}`);
+        console.log('[REMOTE] 🖱️ Sent host mouse disable:', this.hostMouseDisabled);
     }
     
     this.cdr.detectChanges();

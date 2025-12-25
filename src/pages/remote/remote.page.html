@@ -42,6 +42,17 @@
         </ion-title>
 
         <ion-buttons slot="end">
+
+            <ion-button
+    (click)="toggleHostMouseDisable()"
+    [tp]="hostMouseDisabled ? 'Enable Host Mouse' : 'Disable Host Mouse'">
+    <ion-icon 
+        [name]="hostMouseDisabled ? 'hand-left' : 'hand-left-outline'"
+        [style.color]="hostMouseDisabled ? '#ff6b6b' : 'white'"></ion-icon>
+    <span style="margin-left: 8px;">
+        {{ hostMouseDisabled ? 'Mouse Blocked' : 'Block Host Mouse' }}
+    </span>
+</ion-button>
             <ion-button
                 (click)="cursor = !cursor"
                 [tp]="'Show mouse pointer'|translate">
