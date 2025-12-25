@@ -1085,22 +1085,24 @@ toggleHostMouseDisable() {
 
     // ⭐ NEW METHOD - Add this right after close()
     private navigateToHome() {
-        console.log('[REMOTE] 📍 Navigating to /home...');
+    console.log('[REMOTE] 📍 Navigating to /home...');
 
-        try {
-            // If in Electron, close the remote window
-            if (this.electronService.isElectron) {
-                this.electronService.window.close();
-            } else {
-                // If in browser, navigate to home
-                this.router.navigate(['/home']);
-            }
-        } catch (err) {
-            console.error('[REMOTE] Navigation error:', err);
-            // Fallback: try navigation
+    try {
+        if (this.electronService.isElectron) {
+            // Show and focus window, then navigate
+            this.electronService.window.show();
+            this.electronService.window.focus();
+            this.router.navigate(['/home']);
+        } else {
+            // If in browser, navigate to home
             this.router.navigate(['/home']);
         }
+    } catch (err) {
+        console.error('[REMOTE] Navigation error:', err);
+        // Fallback: try navigation
+        this.router.navigate(['/home']);
     }
+}
 
     calcVideoSize() {
         if (!this.video) {
